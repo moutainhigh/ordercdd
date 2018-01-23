@@ -1,0 +1,278 @@
+<script>
+    "use strict";
+    app.controller("ordercddmatchingListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                /*
+                * ordercddId
+                * */
+                $scope.ordercddId = null;
+
+                $rootScope.moduleUploadType = {};
+
+                /*
+                * department
+                * */
+                $scope.departmentVal   = null;
+                $scope.departments     = [];
+//              $scope.capitalproducts = [];
+
+                /*
+                *  capitalproduct
+                * */
+                $scope.capitalproductVal  = null;
+                $scope.capitalproductShow = false;
+
+                /*
+                * 申请额度
+                * */
+                $scope.applyVal = null;
+
+                /*获取所有的资方*/
+                $scope.departmentCredior = function () {
+                    entity.getList("rest/departmenttypes?size=10000").then(function (departmentResResult) {
+                        angular.forEach(departmentResResult._embeddedItems, function (val, key) {
+                            if (val.departmenttypeCode === "CREDITOR") {
+                                //获取所有的资方
+                                entity.getList(val._links.departments.href, ["state"]).then(function (departmentResResult) {
+//                                    $scope.departments = departmentResResult._embeddedItems;
+                                    console.log(departmentResResult);
+
+                                    angular.forEach(departmentResResult._embeddedItems, function (val, key) {
+                                        if (val.state.stateCode === "ENABLED") {
+                                            $scope.departments.push(val)
+                                        }
+                                    })
+
+
+                                });
+                            }
+                        })
+                    });
+                };
+                $scope.departmentCredior();
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "退出",
+                        confirmButtonText: "确定",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+
+                            $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+
+                        });
+                    });
+                };
+
+                /*大方法的对象*/
+                $scope.ordercddmatchingExcute = {
+
+                    /*关闭*/
+                    "disable": function (profile) {
+                        $scope.patchAct("error", "这条客户信息是否关闭", "/rest/ordercdds/" + profile.id, {act: "disable"});
+                    },
+
+                    "downloadFile": function (profile) {
+                        swal({
+                            title: "是否下载所有图片",
+                            type: "warning",
+                            showCancelButton: true,
+                            cancelButtonText: "退出",
+                            confirmButtonText: "同意",
+                            closeOnConfirm: true
+                        }, function () {
+                            var html = '<div style="position: fixed;top: 50%;right: 50%" class="sk-spinner sk-spinner-cube-grid" id="loadAction">' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '</div>';
+                            $("body").append(html);
+
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {act: "downloadFile"}
+                            }).success(function (resResult) {
+                                $("#loadAction").remove();
+                                if (resResult.filePackage) {
+                                    $("#loadAction").remove();
+                                    var form = $("<form>");//定义一个form表单
+                                    form.attr("style", "display:none");
+                                    form.attr("target", "");
+                                    form.attr("method", "get");
+                                    form.attr("action", "http://files.xiaojinpingtai.com/" + resResult.filePackage.newFileName);
+
+                                    $("body").append(form);//将表单放置在web中
+                                    form.submit();
+                                } else {
+                                    $("#loadAction").remove();
+                                    $rootScope.toasterWarning("注意", "该用户没有上传任何的图片！");
+                                }
+                            });
+                        });
+
+
+                    },
+
+                    "getDepartment": function (val) {
+                        $scope.capitalproducts = [];
+                        if (val) {
+                            $scope.capitalproductShow = true;
+
+                            //获取所有的资方
+                            entity.getList(val._links.capitalproducts.href, ["state"]).then(function (result) {
+//                                $scope.capitalproducts = result._embeddedItems;
+
+                                angular.forEach(result._embeddedItems, function (val, key) {
+                                    if (val.state.stateCode === "ENABLED") {
+                                        $scope.capitalproducts.push(val)
+                                    }
+                                })
+
+                                console.log(result);
+                            });
+                        } else {
+                            $scope.capitalproductShow = false;
+                        }
+                    },
+
+
+                    /**/
+                    "paymentApply": function (profile) {
+                        $http({
+                            method: "GET",
+                            url: "/rest/ordercdds/" + profile.id
+                        }).success(function (resResult) {
+                            if (resResult.leftMatchAmount > 0) {
+                                $("#" + profile.id + "_paymentApply").modal("show");
+                            } else {
+                                $rootScope.toasterWarning("注意", "剩余的额度不足,不需要填写!");
+                            }
+                        });
+                    },
+
+                    /**/
+                    "paymentApplySave": function (departmentVal, capitalproductVal, applyVal, profile) {
+                        $http({
+                            method: "GET",
+                            url: "/rest/ordercdds/" + profile.id
+                        }).success(function (resResult) {
+                            if (resResult.leftMatchAmount >= applyVal) {
+                                $http({
+                                    method: "POST",
+                                    url: "/rest/ordercddloans",
+                                    data: {
+                                        act: "create",
+                                        capitalproduct: capitalproductVal._links.self.href,
+                                        applyAmount: applyVal,
+                                        ordercdd: profile._links.self.href
+                                    }
+                                }).success(function (resResult) {
+                                    $("#" + profile.id + "_paymentApply").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+                                    $state.reload();
+
+                                });
+
+                            } else {
+                                $rootScope.toasterWarning("注意", "剩余的额度不足，请重新填写!");
+                            }
+                        });
+                    },
+                    "uploadSupplement": function (profile) {
+                        $scope.ordercddId = profile.id;
+                        $("#" + profile.id + "_uploadSupplement").modal("show");
+                    }
+
+                };
+
+
+                /*上传文件*/
+                //以下是上传文件的动作详情参考前端框架示例 js/controllers/file-upload.js
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 10;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+//                    if (fileItem.file.type !== "application/x-zip-compressed") {
+//
+//                        $rootScope.toasterError("警告！", "审核文件的格式需要为ZIP的压缩文件格式！");
+//
+//                        fileItem.remove();
+//
+//                    } else {
+                    fileItem.topcategory = $rootScope.moduleUploadType.topcategory;
+                    fileItem.subcategory = $rootScope.moduleUploadType.subcategory;
+                    fileItem.formData    = [{fileType: "file"}];
+//                    }
+
+//                    $("#audit_zip_file_input").val("");
+
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    //增加目录结构
+                    response.result.topcategory = fileItem.topcategory;
+                    response.result.subcategory = fileItem.subcategory;
+
+                    $scope.urlName = response.result.newFileName;
+
+                    $http({
+                        method: "PATCH",
+                        url: "/rest/ordercdds/" + $scope.ordercddId,//这里是关联的实体
+                        data: {
+                            fileObject: response.result,//fileObject是上传完文件后的文件对象
+                            act: "uploadSupplement"//上传文件的行为
+                        }
+                    }).success(function (data) {
+                        $rootScope.toasterSuccess("成功", "补充资料上传成功");
+                    });
+                }
+            }
+        ]
+    );
+</script>
+<div ng-controller="ordercddmatchingListModuleController" class="h-full" ui-view></div>

@@ -1,0 +1,446 @@
+<script>
+    "use strict";
+    app.controller("ordercddloanListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state) {
+                $scope.states = [];
+
+                /*搜索值的对象*/
+                $scope.searchForms = {};
+                $scope.forms = {};
+
+                /*
+                *department  部门
+                * */
+                $scope.department    = null;
+                $scope.departmentVal = null;
+
+
+                /*初始值*/
+                $scope.forms.state_id = $scope.state_id;
+                $scope.forms.size     = "10";
+                $scope.forms.sort     = "lastModifiedAt,desc";
+
+
+                entity.getList("getEntityInfo").then(function (response) {
+
+                    $rootScope.allEntitiesInfo = response;
+
+                    $scope.repaymentMethodCode = $rootScope.allEntitiesInfo.capitalproduct.repaymentMethodCode.values;
+
+                });
+
+
+                /*拿所有门店*/
+                /*       $scope.departmentCredior = function () {
+                           entity.getList("rest/departmenttypes?size=10000").then(function (departmentResResult) {
+                               angular.forEach(departmentResResult._embeddedItems, function (val, key) {
+                                   if (val.departmenttypeCode === "STORE") {
+                                       //获取所有部门
+                                       entity.getList(val._links.departments.href).then(function (departmentResResult) {
+                                           $scope.department = departmentResResult._embeddedItems;
+
+       //                                    $scope.departmentVal = $scope.department[0];
+
+                                       });
+                                   }
+                               })
+                           });
+                       };
+                       $scope.departmentCredior();
+       */
+
+                entity.getList("/rest/ordercddloanWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+                        if (window.sessionStorage.getItem(window.myinfo.id + "ordercddloan_state_code")) {
+                            angular.forEach($scope.states, function (val, key) {
+                                if (val.id == window.sessionStorage.getItem(window.myinfo.id + "ordercddloan_state_code")) {
+                                    $scope.stateVal       = $scope.states[key];
+                                    $scope.forms.state_id = val.id;
+                                    $scope.state_id       = val.id;
+                                    $scope.getList(0);
+                                }
+                            })
+                        } else {
+                            $scope.forms.state_id = null;
+                            $scope.getList(0);
+                        }
+//                        $scope.getList(0);
+                    }
+                });
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    $scope.forms.page = page;
+
+                    $http.get("/ordercddloan/search", {
+                        params: $scope.forms
+                    }).success(function (resResult) {
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult.entitys);
+
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.size,
+                                total_elements: resResult.totalElements,
+                                current_page: resResult.number,
+                                num_page: resResult.totalPages,
+                                total_page: resResult.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#ordercddloan_list_paginator", $scope.pageList, $scope.getList);
+                    });
+                };
+
+
+                $scope.stateChange = function (val) {
+                    $scope.forms = {};
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "lastModifiedAt,desc";
+                    if(val){
+
+                        window.sessionStorage.setItem(window.myinfo.id + "ordercddloan_state_code", val.id);
+                        $scope.state_id = val.id;
+
+                        $scope.forms.state_id = val.id;
+//                        $scope.getList(0);
+//                         $scope.searchSubmit();
+                    }else {
+
+                        window.sessionStorage.setItem(window.myinfo.id + "ordercddloan_state_code", "");
+                        $scope.state_id = null;
+                        $scope.forms.state_id = null;
+//                        $scope.getList(0);
+//                         $scope.searchSubmit();
+//                         console.log($scope.forms);
+                    }
+                };
+
+
+                $scope.searchSubmit = function () {
+
+
+                    /*所属门店*/
+//                    $scope.searchForms.department_label = $scope.departmentVal ? $scope.departmentVal.label : null;
+
+                    /*合并对象*/
+                    $scope.forms = Object.assign($scope.searchForms,$scope.forms);
+
+                    $scope.getList(0)
+
+                };
+
+
+                //清除搜索
+                $scope.clearSearch = function () {
+                    $scope.forms = {};
+                    $scope.searchForms = {};
+
+                    if($scope.state_id){
+                        $scope.forms.state_id = $scope.state_id;
+                    }else {
+                        $scope.forms.state_id = null;
+                    }
+
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "lastModifiedAt,desc";
+
+                    $scope.departmentVal          = null;
+                    $scope.repaymentMethodCodeVal = null;
+                    $scope.getList(0);
+                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="ordercddloanListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <form class="form-inline">
+                    <div class="clearfix">
+                        <div class="form-group m-r">
+                            <label style="width:70px;text-align:right;">状态：</label>
+                            <select ng-model="stateVal"
+                                    class="form-control input-sm" style="width:150px;"
+                                    ng-options="y.label for (x,y) in states"
+                                    ng-change="stateChange(stateVal)">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <div class="form-group m-r">
+                            <label for="ordercddloan_realName">客户名称：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="ordercddloan_realName"
+                                   ng-model="searchForms.realName">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="ordercddloan_searchCddSn" style="width:70px;text-align:right;">订单号：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="ordercddloan_searchCddSn"
+                                   ng-model="searchForms.cddSn">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="ordercddloan_searchOrdercddloanSn">申请单号：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="ordercddloan_searchOrdercddloanSn"
+                                   ng-model="searchForms.ordercddloanSn">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="ordercddloan_department_label">服务门店：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="ordercddloan_department_label"
+                                   ng-model="searchForms.department_label">
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <button class="btn btn-sm btn-primary m-r" ng-click="searchSubmit()">
+                            <i class="fa fa-search"></i>
+                            查询
+                        </button>
+                        <button class="btn btn-sm btn-default m-r" ng-click="clearSearch()">
+                            <i class="fa fa-refresh"></i>
+                            清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <!--<div class="wrapper b-b clearfix">-->
+            <!--<div class="inline pull-left">-->
+            <!--<span translate="ordercddloan.self.label"></span>状态：-->
+            <!--</div>-->
+            <!--<div class="inline pull-left m-r" ng-repeat="state in states">-->
+            <!--<label class="i-checks i-checks-sm pull-left m-n" ng-click="stateSelect($event,state.stateCode)">-->
+            <!--<input type="radio" value="{{state.stateCode}}" ng-model="state_code" name="state"><i></i> {{-->
+            <!--state.label }}-->
+            <!--</label>-->
+            <!--</div>-->
+            <!--</div>-->
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-t b-light" style="border-bottom: none;">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>订单号</th>
+                                            <th>申请单号</th>
+                                            <th>客户名称</th>
+                                            <th>服务门店</th>
+                                            <th>申请额度(元)</th>
+                                            <th>通过额度(元)</th>
+                                            <th>资金产品</th>
+                                            <th>状态</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle clearfix" >
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>
+                                                        </li>
+                                                        <li ng-repeat="act in item.listActs track by $index"
+                                                            ng-click="ordercddloanExcute[act.actCode](item)">
+                                                            <a>{{act.label}}</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td class="v-middle list-hover-a`">
+                                                <a ui-sref="workflowEntity.home.profile.info({id:item.ordercdd_id,entity_key:'ordercdd'})">
+                                                    {{ item.ordercdd_cddsn }}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.ordercddloanSn }}
+                                            </td>
+                                            <td class="v-middle list-hover-a">
+                                                <a ui-sref="workflowEntity.home.profile.info({id:item.person_id,entity_key:'person'})">
+                                                    {{ item.ordercdd_realName }}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.service_department }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.ordercdd_applyAmount }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.applyAmount }}
+                                            </td>
+                                            <td class="v-middle list-hover-a">
+                                                <a ui-sref="workflowEntity.home.profile.info({id:item.capitalproduct_id,entity_key:'capitalproduct'})">
+                                                    {{ item.capitalproduct_label }}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.state_label }}
+                                                <div class="modal fade" id="{{ item.id }}_failed" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写未通过理由</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-2 text-right">理由</label>
+                                                                    <div class="col-lg-10">
+                                                                        <textarea class="form-control"
+                                                                                  ng-model="failedVla" cols="9"
+                                                                                  style="height: 250px">
+                                                                        </textarea>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddloanExcute.failedSave(failedVla,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                 <div class="modal fade" id="{{ item.id }}_adopt">
+                                                    <div class="modal-xs modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal">
+                                                                    <span>×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">资方回款申请</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <form name="step1" class="form-horizontal form-validation">
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">申请额度</label>
+                                                                        <div class="col-lg-6">
+                                                                            <label style="font-size: 24px;">
+                                                                                {{ item.applyAmount ? item.applyAmount : "0"}} 元
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">同意额度</label>
+                                                                        <div class="col-lg-6">
+                                                                            <div class="input-group">
+                                                                                <input type="text"
+                                                                                       name="apply_applyVal"
+                                                                                       class="form-control"
+                                                                                       ng-model="applyVal"
+                                                                                       required
+                                                                                       pattern="^\d+(?:.\d{1,2})?$">
+                                                                                <span class="input-group-addon">元</span>
+                                                                            </div>
+                                                                            <span class="help-block text-danger"
+                                                                                  ng-show="step1.apply_applyVal.$invalid">
+                                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;同意额度为数字(最多两位小数)，且必填
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                </form>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg" ng-disabled="step1.$invalid"
+                                                                        ng-click="ordercddloanExcute.adoptSave(applyVal,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="ordercddloan_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }} 条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+
+
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

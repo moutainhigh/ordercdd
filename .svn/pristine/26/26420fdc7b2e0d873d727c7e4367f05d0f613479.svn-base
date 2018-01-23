@@ -1,0 +1,1 @@
+"use strict";angular.module("app",["ngAnimate","ngAria","ngCookies","ngResource","ngSanitize","ngStorage","ngLocale","ui.router","oc.lazyLoad","pascalprecht.translate","angularFileUpload","spring-data-rest"]);

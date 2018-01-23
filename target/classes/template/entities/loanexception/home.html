@@ -1,0 +1,37 @@
+<script>
+    app.controller("loanHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile = {};
+                $scope.profileDetail = {};
+                $scope.canActs = [];
+                $scope.feetypes    = [];
+
+
+                entity.getDetail("/loanexception/detail?id=" + $scope.id).then(function (resResult) {
+                    console.log(resResult,'a');
+                    $scope.profile = resResult;
+                });
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loanHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

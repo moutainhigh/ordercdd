@@ -1,0 +1,327 @@
+package com.liyang.controller.domain;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+import javax.annotation.Resource;
+
+import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.bankcard.Bankcard;
+import com.liyang.domain.base.FilterActUtil;
+import com.liyang.domain.creditrepayplan.Creditrepayplan;
+import com.liyang.domain.creditrepayplan.CreditrepayplanRepository;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype.DepartmenttypeCode;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.loan.LoanRepository;
+import com.liyang.domain.loan.Loanoverdue;
+import com.liyang.domain.loan.LoanoverdueRepository;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.excel.ExcelLoan;
+import com.liyang.service.LoanService;
+import com.liyang.util.BeanUtil;
+import com.liyang.util.CommonUtil;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject.Level;
+import com.liyang.util.SearchByTimes;
+
+@RestController
+@RequestMapping("/loan")
+public class LoanController {
+	private final static List<String> ignoreActCodes = new ArrayList<>();//忽略的功能按钮行为code
+	static {
+		ignoreActCodes.add("loan");
+		ignoreActCodes.add("loanAction");
+		ignoreActCodes.add("uploadMaterials");
+		ignoreActCodes.add("uploadPaymentMaterials");
+		ignoreActCodes.add("repayment");
+		ignoreActCodes.add("settle");
+		ignoreActCodes.add("confirmInformation");
+		ignoreActCodes.add("exception");
+		ignoreActCodes.add("baddebt");
+	}
+	@Resource
+	private LoanRepository repository;
+	@Resource
+    private DepartmentRepository departmentRepository;
+	@Resource
+	private LoanService loanService;
+	@Resource
+	private CreditrepayplanRepository creditrepayplanRepository;
+	@Resource
+	private LoanoverdueRepository loanoverdueRepository;
+	
+	@RequestMapping("/search")
+	public EntityPage search(@RequestParam(required=false) Map<String,Object> params) throws TimeConditiosException {
+		GenericQueryExpSpecification<Loan> queryExpression = new GenericQueryExpSpecification<Loan>();
+
+		//状态
+		queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"),true));
+		//操作人
+		queryExpression.add(QueryExpSpecificationBuilder.eq("serviceUser.id", params.get("user_id"),true));
+		//放款给？
+		if (params.get("loanToStore")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.eq("ordercdd.loanToStore", Boolean.valueOf(params.get("loanToStore").toString()),true));
+		}
+		//授权门店，创建人部门
+		if (params.get("department_label")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("ordercdd.createdByDepartment.label", params.get("department_label").toString(),true));
+		}
+		//手机号
+		if (params.get("applyMobile")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("ordercdd.applyMobile", params.get("applyMobile").toString(),true));
+		}
+		//查逾期
+		if (params.get("overdue")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.eq("overdue", Boolean.valueOf(params.get("overdue").toString()),true));
+		}
+		//单号
+		if (params.get("loanSn")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("loanSn", params.get("loanSn").toString(),true));
+		}
+		//客户姓名
+		if (params.get("realName")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("ordercdd.realName", params.get("realName").toString(),true));
+		}
+		//客户id
+		if (params.get("person_id")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.eq("debtorPerson.id", params.get("person_id").toString(),true));
+		}
+		//根据时间查询
+		if(params.get("timeRangeKey")!=null){
+			SearchByTimes.addTimesConditions(params,queryExpression);
+		}
+
+		limitField(queryExpression);
+		Page<Loan> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+		String[] fields = new String[] {"id","label","createdAt","lastModifiedAt","state",
+				"principal","debtorInterest","ordercdd","loanSn","files","loanoverdues","overdue","loanTime","debtorRealityAmount",
+				"oneTimeFee","retreatFee","isException"};
+
+		return convertCustom(EntityPageUtil.convert(page, fields));
+	}
+	
+	private EntityPage convertCustom(EntityPage page) {
+		List<Map<String,Object>> entities = page.getEntitys();
+		if (entities==null) {
+			return page;
+		}
+		Boolean loanToStore = false;
+		Integer createById = null;
+		Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+		//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+		for (Map<String, Object> map : entities) {
+			if (map==null) {
+				continue;
+			}
+			//自定义的转换，订单
+			Object ordercdd = map.get("ordercdd");
+			if (ordercdd instanceof Ordercdd) {
+				Ordercdd obj = (Ordercdd) ordercdd;
+				map.put("ordercdd_realName", obj.getRealName());
+				map.put("ordercdd_applyMobile", obj.getApplyMobile());
+				map.put("applyBankCard", obj.getApplyBankCard());
+				map.put("applyBankCardBranch", obj.getApplyBankCardBranch());
+				map.put("loanToStore", obj.getLoanToStore());
+				loanToStore = obj.getLoanToStore();
+				loanToStore = loanToStore == null ? false:loanToStore;
+				map.remove("ordercdd");
+
+
+				Department store = obj.getCreatedByDepartment();
+				String storeName=null;
+				if(store != null){
+					createById = store.getId();
+					storeName=store.getLabel();
+				}
+				map.put("service_department",storeName);
+			}
+
+			Object files = map.get("files");
+			if (files != null) {
+				Set<?> set = (Set<?>) files;
+				if (set == null || (set.size() == 0)) {
+					map.put("loan_file_length", 0);
+				} else {
+					map.put("loan_file_length", set.size());
+				}
+				map.remove("files");
+			}
+			Object loanoverdues = map.get("loanoverdues");
+			if (loanoverdues != null) {
+				map.remove("loanoverdues");
+				Set<Loanoverdue> loanoverdueSet;
+				loanoverdueSet = (Set<Loanoverdue>) loanoverdues;
+
+				Optional<Loanoverdue> loanoverdueOptional = loanoverdueSet.stream().filter(l -> l.getStatus() == 0).findFirst();
+				loanoverdueOptional.ifPresent(loanoverdue -> map.put("loanoverdues", loanoverdue));
+			}
+			if (loanToStore) {//如果放款给门店
+				if (!createById.equals(curDepartmentId)) {//登录人不是创建订单的门店，过滤按钮
+					Object actList = map.get("currentUserCanActList");
+					if (actList != null) {
+						map.remove("currentUserCanActList");
+						map.put("currentUserCanActList", FilterActUtil.ignoreAct(actList, ignoreActCodes));
+					}
+				}
+			}else {//如果放款给客户
+				if(!curDepartmentId.equals(company.getId())) {//如果是门店,过滤按钮
+					Object actList = map.get("currentUserCanActList");
+					if (actList != null) {
+						map.remove("currentUserCanActList");
+						map.put("currentUserCanActList", FilterActUtil.ignoreAct(actList, ignoreActCodes));
+					}
+				}
+			}
+		}
+		return page;
+	}
+	
+	/**
+     * 限制权限，例如：部门、角色等
+     */
+    private void limitField(GenericQueryExpSpecification<Loan> queryExpression) {
+    	Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+    	//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+    	//门店，暂时认为非平台的
+    	if(curDepartmentId.equals(company.getId())) {//如果登录人部门是平台，只查平台一审和平台二审的
+    	}else {//查询其他状态的
+			queryExpression.add(QueryExpSpecificationBuilder.eq("ordercdd.createdByDepartment.id", 
+					curDepartmentId, true));
+		}
+	}
+    
+    
+/***************************详情页***************************/
+    
+    @RequestMapping("/detail")
+    public Map<String, Object> detail(@RequestParam Integer loanId) {
+		if (loanId == null) {
+			throw new FailReturnObject(1, "loanId不能为空", Level.ERROR);
+		}
+		Loan loan = repository.findOne(loanId);
+		if (loan == null) {
+			throw new FailReturnObject(2, "Loan未找到", Level.ERROR);
+		}
+		Map<String,Object> result = BeanUtil.beanToMap(loan);
+		BeanUtil.commonConvert(result,loan);
+		result.remove("creditcard");
+		result.remove("punishinterestrule");
+		result.remove("debtorPerson");
+		result.remove("debtorEnterprise");
+		result.remove("ordercdd");
+		result.remove("creditrepayments");
+		result.remove("creditrepayplans");
+		result.remove("loanoverdues");
+		Object bankcard = result.get("debtorReceiveBankcard");
+		result.remove("debtorReceiveBankcard");
+		if (bankcard != null) {
+			Bankcard obj = (Bankcard) bankcard;
+			Map<String,Object> map = new HashMap<>();
+			map.put("bank", obj.getBank().getLabel());
+			map.put("branchName", obj.getBranchName());
+			map.put("accountIdentity", obj.getAccountIdentity());
+			result.put("debtorReceiveBankcard", map);
+		}
+		Set<?> files = loan.getFiles();
+		result.put("fileLength", 0);
+		if (files!=null) {
+			result.put("fileLength", files.size());
+		}
+		
+		return result;
+	}
+
+
+	@GetMapping("/export")
+	public ResponseEntity<org.springframework.core.io.Resource> export(@RequestParam(required = false) HashMap<String,Object> params) throws TimeConditiosException {
+		params.put("size",1000);
+		EntityPage entityPage = search(params);
+		ExcelLoan excelLoan=new ExcelLoan();
+		excelLoan.export(entityPage.getEntitys());
+		return  excelLoan.responseEntity();
+	}
+	
+	/**获取客户剩余应还金额等
+	 * @param loanId
+	 * @return
+	 */
+	@RequestMapping("/count")
+	public Map<String, Object> count(@RequestParam Integer loanId) {
+		if (loanId == null) {
+			throw new FailReturnObject(1, "loanId不能为空", Level.ERROR);
+		}
+		Loan loan = repository.findOne(loanId);
+		if (loan == null) {
+			throw new FailReturnObject(1, "loan为null", Level.ERROR);
+		}
+		BigDecimal debtorRepayAmount = loanService.debtorRepayAmount(loan);//客户已还金额
+		BigDecimal debtorLeftAmount = loanService.debtorLeftAmount(loan);//客户剩余应还金额
+		BigDecimal storeAdvanceInterest = loanService.storeAdvanceInterest(loan);//客户垫付的利息
+		Map<String, Object> result = new HashMap<>();
+		result.put("debtorRepayAmount", debtorRepayAmount);
+		result.put("debtorLeftAmount", debtorLeftAmount);
+		result.put("storeAdvanceInterest", storeAdvanceInterest);
+		return result;
+	}
+	
+	/**提前结清查询应还金额
+	 * @param loanId
+	 * @return
+	 */
+	@RequestMapping("/settle")
+	public BigDecimal settle(@RequestParam Integer loanId) {
+		if (loanId == null) {
+			throw new FailReturnObject(1, "loanId不能为空", Level.ERROR);
+		}
+		Loan loan = repository.findOne(loanId);
+		if (loan == null) {
+			throw new FailReturnObject(1, "loan为null", Level.ERROR);
+		}
+		List<Creditrepayplan> planList = creditrepayplanRepository.findByLoanId(loanId);
+		if (planList == null) {//没有还款计划
+			return new BigDecimal(0);
+		}
+		//已结清的，不管是坏账结清或正常结清
+		int size = 0;
+		for (Creditrepayplan creditrepayplan : planList) {//所有的还款计划剩余金额都是0
+			BigDecimal temp = creditrepayplan.getLeftAmount();
+			if (temp!=null && (new BigDecimal(0).compareTo(temp) < 0)) {//没还清的计划
+				size++;
+			}
+		}
+		if (size <= 0) {
+			return new BigDecimal(0);
+		}
+		BigDecimal leftAmount = new BigDecimal(0);
+		Loanoverdue loanoverdue = loanoverdueRepository.findEnable(loanId);
+		if (loanoverdue != null) {
+			leftAmount = leftAmount.add(loanoverdue.getOverdueAmount());
+		}
+		//正常的计划
+		Creditrepayplan plan = creditrepayplanRepository.findNormalPlan(loanId);
+		if (plan != null) {
+			leftAmount = leftAmount.add(plan.getLeftAmount());
+		}
+		leftAmount = leftAmount.add(loan.getPrincipal())
+				.add(loan.getPrincipal().multiply(new BigDecimal(0.03))).setScale(2,BigDecimal.ROUND_HALF_UP);//违约金
+		return leftAmount;
+	}
+}

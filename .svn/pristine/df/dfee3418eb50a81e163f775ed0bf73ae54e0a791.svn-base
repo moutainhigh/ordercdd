@@ -1,0 +1,51 @@
+<div style="padding: 0 15px;">
+    <h1 style="margin-top: 35px; font-size: 22px; font-weight: bold;">欢迎登录</h1>
+    <p style="margin-top: 10px;font-size: 14px; color: #a1a1a1;">请输入您的手机号码</p>
+    <p style="margin-top: 5px;font-size: 14px; color: #a1a1a1;">登录您的账户!</p>
+</div>
+<form id="loginForm">
+    <div class="weui_cells weui_cells_form">
+        <div class="weui_cell">
+            <div class="weui_cell_hd"><label class="weui_label">手机号</label></div>
+            <div class="weui_cell_bd weui_cell_primary">
+                <input ng-model="applyMobile" id="loginMobile" class="weui_input" type="tel" maxlength="11" required placeholder="请输入手机号" emptyTips="请输入手机号" notMatchTips="请输入正确的手机号"/>
+            </div>
+        </div>
+        <div class="weui_cell weui_vcode">
+            <div class="weui_cell_hd"><label class="weui_label">验证码</label></div>
+            <div class="weui_cell_bd weui_cell_primary">
+                <input ng-model="smscode" class="weui_input" type="tel" placeholder="请输入验证码" maxlength="6" minlength="4" required/>
+            </div>
+            <div class="weui_cell_ft">
+                <button style="background: #fff;border: none; border-left: 1px solid #e8e8e8" href="javascript:;" class="weui-vcode-btn" ng-click="vCode()" ng-class="{true: 'cdd_vCode', false: 'cdd_vCode_active'}[config.css]" ng-disabled="config.disabled">{{config.vCodeName}}</button>
+            </div>
+        </div>
+        <div class="weui_cell"></div>
+    </div>
+</form>
+<div class="page-bd-15" style="margin-top: 20px;">
+   <button ng-click="login()" class="weui_btn weui_btn_primary">登录</button>
+</div>
+
+<style scoped>
+    .weui_cells:before{
+        border-top: none;
+    }
+    .weui_cells:after{
+        border-bottom: none;
+    }
+    .astyle{
+        cursor: pointer;border-radius: 40px;width: 100%; height: 40px; background: #FFBD00; color: white;display: inline-block; line-height: 40px; text-align: center;
+    }
+    .astyle:active{
+        background: #ccc;
+        color: white;
+    }
+    .a2{
+        color: #f35626;
+        background-image: -webkit-linear-gradient(92deg,#f35626,#feab3a);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        -webkit-animation: hue 60s infinite linear;
+    }
+</style>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" data-ng-app="app"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <title>小金平台</title>
+    <meta name="description" content="小金平台" />
+    <meta name="keywords" content="小金平台" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <link href="https://cdn.bootcss.com/animate.css/3.5.2/animate.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/simple-line-icons/2.4.1/css/simple-line-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Sweetalert -->
+    <link href="https://cdn.bootcss.com/sweetalert/1.1.3/sweetalert.min.css" rel="stylesheet">
+    <!-- toaster -->
+    <!--<link rel="stylesheet" href="libs/angular/angularjs-toaster/toaster.min.css" type="text/css"/>-->
+
+    <!-- jquery toastr -->
+    <link rel="stylesheet" type="text/css" href="libs/jquery/toastr/toastr.min.css" />
+
+    <!-- build:css css/app.min.css -->
+    <link rel="stylesheet" href="css/font.min.css" type="text/css"/>
+    <link rel="stylesheet" href="css/app.css" type="text/css"/>
+    <!-- endbuild -->
+    <script th:inline="javascript">
+        window.myid = [[${id}]];
+        window.myinfo = JSON.parse([[${userInfoSt}]]);
+    </script>
+    <script charset="utf-8" src="https://map.qq.com/api/js?v=2.exp&key=WLBBZ-NBVKS-Z7UOR-6PUWJ-T2J3T-I2BI3"></script>
+</head>
+<body ng-controller="AppCtrl">
+<div class="app" id="app" ng-class="{
+                    'app-header-fixed':app.settings.headerFixed, 'app-aside-fixed':app.settings.asideFixed, 'app-aside-folded':app.settings.asideFolded, 'app-aside-dock':app.settings.asideDock, 'container'
+                        :app.settings.container}">
+
+    <!-- navbar -->
+    <div data-ng-include=" 'tpl/blocks/header.html'" class="app-header navbar">
+    </div>
+    <!-- / navbar -->
+
+    <!-- menu -->
+    <div data-ng-include=" 'tpl/blocks/aside.html'" class="app-aside hidden-xs {{app.settings.asideColor}}">
+    </div>
+    <!-- / menu -->
+
+    <!-- content -->
+    <div class="app-content">
+        <div ui-butterbar></div>
+        <a class="off-screen-toggle hide" ui-toggle-class="off-screen" data-target=".app-aside" ></a>
+        <div class="app-content-body app-content-full fade-in-up h-full" ui-view="">
+
+            <!--<div class="spinner">-->
+            <!--<div class="rect1"></div>-->
+            <!--<div class="rect2"></div>-->
+            <!--<div class="rect3"></div>-->
+            <!--<div class="rect4"></div>-->
+            <!--<div class="rect5"></div>-->
+            <!--</div>-->
+            <div style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                <div class="sk-spinner sk-spinner-cube-grid">
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                    <div class="sk-cube"></div>
+                </div>
+                <div class="text-center m-t">加载中请稍后</div>
+            </div>
+        </div>
+        <!-- /content -->
+        <div data-ng-include=" 'tpl/blocks/settings.html'" class="settings panel panel-default"></div>
+    </div>
+</div>
+
+<!-- 修改密码 -->
+<div class="modal fade" id="reset_password_modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+                <h4 class="modal-title">修改密码</h4>
+            </div>
+            <div class="modal-body">
+                <form name="reset_password_form" class="form-horizontal form-validation">
+                    <div class="form-group">
+                        <label class="col-xs-3 control-label">原密码：</label>
+                        <div class="col-xs-9">
+                            <input type="password"
+                                   class="form-control"
+                                   ng-model="oldPwd"
+                                   autocomplete="off"
+                                   required
+                                   placeholder="原密码">
+                        </div>
+                    </div>
+                    <div class="line line-dashed b-b line-lg pull-in "></div>
+                    <div>
+                        <div class="form-group">
+                            <label class="col-xs-3 control-label">新密码：</label>
+                            <div class="col-xs-9">
+                                <input type="password"
+                                       class="form-control"
+                                       name="newPwd"
+                                       required
+                                       ng-model="newPwd"
+                                       autocomplete="off"
+                                       placeholder="新密码">
+                            </div>
+                        </div>
+                        <div class="line line-dashed b-b line-lg pull-in"></div>
+
+                        <div class="form-group">
+                            <label class="col-xs-3 control-label">确认密码：</label>
+                            <div class="col-xs-9">
+                                <input type="password"
+                                       class="form-control"
+                                       name="confirmPwd"
+                                       required
+                                       autocomplete="off"
+                                       ng-model="confirmPwd"
+                                       ui-validate="'$value==newPwd'"
+                                       ui-validate-watch="'newPwd'"
+                                       placeholder="确认密码">
+                                <span class="help-block text-danger" ng-show='reset_password_form.confirmPwd.$error.validator'>两次输入的密码不一致！</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" ng-disabled="reset_password_form.$invalid" ng-click="resetPassword()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 用户编辑 -->
+<div class="modal fade" id="user_update_modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+                <h4 class="modal-title">修改个人资料</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">姓名/昵称：</label>
+                        <div class="col-sm-9">
+                            <input type="text"
+                                   class="form-control"
+                                   ng-model="updateUser.nickname"
+                                   autocomplete="off"
+                                   placeholder="姓名/昵称">
+                        </div>
+                    </div>
+                    <div class="line line-dashed b-b line-lg pull-in "></div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">性别：</label>
+                        <div class="col-sm-9">
+                            <label class="checkbox-inline i-checks">
+                                <input type="radio" name="sex" ng-model="updateUser.sex" value="1"><i></i> 男
+                            </label>
+                            <label class="checkbox-inline i-checks">
+                                <input type="radio" name="sex" ng-model="updateUser.sex" value="2"><i></i> 女
+                            </label>
+                        </div>
+                    </div>
+                    <div class="line line-dashed b-b line-lg pull-in "></div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">地址：</label>
+                        <div class="col-sm-9 clearfix">
+                            <div class="pull-left inline m-r" style="width:calc( 33.3% - 15px);">
+                                <input type="text" ng-model="updateUser.country" class="form-control" autocomplete="off" placeholder="国">
+                            </div>
+                            <div class="pull-left inline m-r" style="width:calc( 33.3% - 15px);">
+                                <input type="text" ng-model="updateUser.province" class="form-control" autocomplete="off" placeholder="省">
+                            </div>
+                            <div class="pull-left inline" style="width:calc( 33.3%);">
+                                <input type="text" ng-model="updateUser.city" class="form-control" autocomplete="off" placeholder="市">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" ng-click="updateUserInfo()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改头像 -->
+<div class="modal fade" id="headimg_update_modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+                <h4 class="modal-title">修改头像</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">头像：</label>
+                        <div class="col-sm-9">
+                            <input type="file"
+                                   id="headimgurl_update_input"
+                                   class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" ng-click="updateHeadimg()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- build:js js/app.angular.js -->
+<!-- jQuery -->
+<script src="https://cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+<!-- Bootstrap -->
+<script src="https://cdn.bootcss.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<!-- Bootstrap Paginator -->
+<script src="libs/jquery/bootstrap-paginator/bootstrap-paginator.min.js"></script>
+<!-- jquery toastr -->
+<script src="libs/jquery/toastr/toastr.min.js"></script>
+<script>
+    toastr.options = {
+        "closeButton": true,
+        "debug": false,
+        "positionClass": "toast-bottom-right",
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "5000",
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut"
+    };
+</script>
+
+<script src="libs/regions/regions.js"></script>
+<!-- Sweetalert -->
+<script src="https://cdn.bootcss.com/sweetalert/1.1.3/sweetalert.min.js"></script>
+<!-- moment.js -->
+<script src="https://cdn.bootcss.com/moment.js/2.18.1/moment.js"></script>
+<script src="https://cdn.bootcss.com/moment.js/2.18.1/locale/zh-cn.js"></script>
+<!-- echarts -->
+<script src="https://cdn.bootcss.com/echarts/3.7.0/echarts.min.js"></script>
+<!-- scokjs -->
+<script src="https://cdn.bootcss.com/sockjs-client/1.1.4/sockjs.min.js"></script>
+<!-- Angular -->
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/angular.min.js"></script>
+
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/i18n/angular-locale_zh-cn.js"></script>
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/angular-animate.min.js"></script>
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/angular-aria.min.js"></script>
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/angular-cookies.min.js"></script>
+<!--<script src="libs/angular/angular-messages/angular-messages.js"></script>-->
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/angular-resource.min.js"></script>
+<script src="https://cdn.bootcss.com/angular.js/1.5.8/angular-sanitize.min.js"></script>
+<!--<script src="libs/angular/angular-touch/angular-touch.js"></script>-->
+<script src="https://cdn.bootcss.com/angular-ui-router/0.2.15/angular-ui-router.min.js"></script>
+<script src="libs/angular/ngstorage/ngStorage.min.js"></script>
+<script src="libs/angular/angular-ui-utils/ui-utils.min.js"></script>
+
+<script src="https://cdn.bootcss.com/angular-file-upload/1.1.5/angular-file-upload.min.js"></script>
+<!-- bootstrap -->
+<script src="https://cdn.bootcss.com/angular-ui-bootstrap/0.12.1/ui-bootstrap-tpls.min.js"></script>
+<!-- lazyload -->
+<script src="https://cdn.bootcss.com/oclazyload/0.5.2/ocLazyLoad.min.js"></script>
+<!-- translate -->
+<script src="https://cdn.bootcss.com/angular-translate/2.5.2/angular-translate.min.js"></script>
+<script src="https://cdn.bootcss.com/angular-translate/2.15.2/angular-translate-loader-static-files/angular-translate-loader-static-files.min.js"></script>
+<script src="https://cdn.bootcss.com/angular-translate/2.15.2/angular-translate-storage-cookie/angular-translate-storage-cookie.min.js"></script>
+<script src="https://cdn.bootcss.com/angular-translate/2.15.2/angular-translate-storage-local/angular-translate-storage-local.min.js"></script>
+<!--<script src="libs/angular/angularjs-toaster/toaster.min.js"></script>-->
+<!-- spring-data-rest -->
+<script src="libs/angular/angular-spring-data-rest/angular-spring-data-rest.min.js"></script>
+
+<!-- App -->
+<script src="js/app.min.js"></script>
+<script src="js/config.min.js"></script>
+<script src="js/config.lazyload.min.js"></script>
+<script src="js/config.router.min.js"></script>
+<script src="js/main.min.js"></script>
+<script src="js/services/customService.min.js"></script>
+<script src="js/filters/customFilter.min.js"></script>
+<script src="js/services/ui-load.js"></script>
+<script src="js/directives/region-select.js"></script>
+<script src="js/directives/directives.js"></script>
+<script src="js/controllers/entityControllers.min.js"></script>
+<script src="js/controllers/entityConfigControllers.min.js"></script>
+<script src="https://res.wx.qq.com/connect/zh_CN/htmledition/js/wxLogin.js"></script>
+<!-- endbuild -->
+<!-- Lazy loading -->
+<!--<toaster-container toaster-options="{'position-class': 'toast-bottom-right', 'close-button':true}"></toaster-container>-->
+</body>
+</html>

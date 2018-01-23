@@ -1,0 +1,58 @@
+<script>
+    app.controller("vehicleHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                entity.getDetail("/rest/vehicles/" + $scope.id, ["createdBy", "state", "createdByDepartment", "lastModifiedBy", "workflow","person"]).then(function (resResult) {
+
+                    $scope.profile = resResult;
+
+                    angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                        if (val.actGroup === "UPDATE") {
+                            $scope.canActs.push(val);
+                        } else if (val.actGroup === "FILE_OPERATE") {
+                            $scope.canFileActs.push(val)
+                        }
+                    });
+
+                    $scope.state_code = $scope.profile.state.stateCode;
+
+                });
+
+                /*
+                 * 用户所有操作的方法集合，其中每一个方法对应实体的一个行为，也有自定义方法
+                 * @author  李斌
+                 * */
+                $scope.vehicleExcute = {
+                    "update": function () {
+                        $state.go("workflowEntity.home.profile.form", {
+                            id: $scope.id,
+                            entity_key: "vehicle"
+                        }, {reload: false});
+                    }
+                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="vehicleHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

@@ -1,0 +1,192 @@
+<!--<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">-->
+    <!--<button ng-class="act.btnClass"-->
+            <!--ng-click="loanexceptionExcute[act.actCode](profile)"-->
+            <!--tooltip="{{act.help}}"-->
+            <!--tooltip-placement="bottom"-->
+            <!--ng-repeat="act in canActs">-->
+        <!--<i ng-class="act.iconClass"></i> {{act.label}}-->
+    <!--</button>-->
+<!--</div>-->
+
+
+<!--&lt;!&ndash;转正常&ndash;&gt;-->
+<!--<div class="modal fade" id="{{ profile.id }}_normal" tabindex="-1" role="dialog">-->
+    <!--<div class="modal-xs modal-dialog" role="document">-->
+        <!--<div class="modal-content">-->
+            <!--<div class="modal-header">-->
+                <!--<button type="button" class="close" data-dismiss="modal"-->
+                        <!--aria-label="Close">-->
+                    <!--<span aria-hidden="true">×</span>-->
+                <!--</button>-->
+                <!--<h4 class="modal-title">请填写正常原因</h4>-->
+            <!--</div>-->
+            <!--<div class="modal-body">-->
+                <!--<div class="form-group clearfix">-->
+                    <!--<label class="col-lg-2 text-right">理由</label>-->
+                    <!--<div class="col-lg-10">-->
+                        <!--<textarea class="form-control" ng-model="handleRemark" cols="9" style="height: 250px">-->
+                        <!--</textarea>-->
+                    <!--</div>-->
+                <!--</div>-->
+            <!--</div>-->
+            <!--<div class="modal-footer text-center">-->
+                <!--<button type="button" class="btn btn-success w-lg"-->
+                        <!--ng-click="loanexceptionExcute.handleRemark(handleRemark,item)">-->
+                    <!--提交-->
+                <!--</button>-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash;转坏账&ndash;&gt;-->
+<!--<div class="modal fade" id="{{ profile.id }}_baddebt" tabindex="-1" role="dialog">-->
+    <!--<div class="modal-xs modal-dialog" role="document">-->
+        <!--<div class="modal-content">-->
+            <!--<div class="modal-header">-->
+                <!--<button type="button" class="close" data-dismiss="modal"-->
+                        <!--aria-label="Close">-->
+                    <!--<span aria-hidden="true">×</span>-->
+                <!--</button>-->
+                <!--<h4 class="modal-title">请填写转坏账信息</h4>-->
+            <!--</div>-->
+            <!--<div class="modal-body">-->
+                <!--<form name="step2" class="form-horizontal form-validation">-->
+                    <!--<div class="form-group clearfix">-->
+                        <!--<label class="col-lg-4 control-label text-right margin-top">客户总共剩余应还</label>-->
+                        <!--<div class="col-lg-6">-->
+                            <!--<label style="font-size: 24px;">-->
+                                <!--{{ baddebtVal.debtorLeftAmount }} 元-->
+                            <!--</label>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="form-group clearfix">-->
+                        <!--<label class="col-lg-4 control-label text-right margin-top">门店垫付利息</label>-->
+                        <!--<div class="col-lg-6">-->
+                            <!--<label style="font-size: 24px;">-->
+                                <!--{{ baddebtVal.storeAdvanceInterest }} 元-->
+                            <!--</label>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="form-group clearfix">-->
+                        <!--<label class="col-lg-4 control-label text-right margin-top">门店垫付本金</label>-->
+                        <!--<div class="col-lg-8">-->
+                            <!--<div class="input-group">-->
+                                <!--<input type="text"-->
+                                       <!--name="store_advance_principal"-->
+                                       <!--class="form-control"-->
+                                       <!--ng-model="storeAdvancePrincipal"-->
+                                       <!--required pattern="^\d+(?:.\d{1,2})?$">-->
+                                <!--<span class="input-group-addon">元</span>-->
+                            <!--</div>-->
+                            <!--<span class="help-block text-danger"-->
+                                  <!--ng-show="step2.store_advance_principal.$invalid">-->
+                                  <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;门店垫付本金为数字(最多两位小数)，且必填-->
+                            <!--</span>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--&lt;!&ndash;<div class="form-group clearfix">&ndash;&gt;-->
+                    <!--&lt;!&ndash;<label class="col-lg-4 control-label text-right margin-top">坏账亏损</label>&ndash;&gt;-->
+                    <!--&lt;!&ndash;<div class="col-lg-6">&ndash;&gt;-->
+                    <!--&lt;!&ndash;<label style="font-size: 24px;">&ndash;&gt;-->
+                    <!--&lt;!&ndash;元&ndash;&gt;-->
+                    <!--&lt;!&ndash;</label>&ndash;&gt;-->
+                    <!--&lt;!&ndash;</div>&ndash;&gt;-->
+                    <!--&lt;!&ndash;</div>&ndash;&gt;-->
+                    <!--<div class="form-group clearfix">-->
+                        <!--<label class="col-lg-4 control-label text-right margin-top">实际向资方还款</label>-->
+                        <!--<div class="col-lg-8">-->
+                            <!--<div class="input-group">-->
+                                <!--<input type="text"-->
+                                       <!--name="capital_real_amount"-->
+                                       <!--class="form-control"-->
+                                       <!--ng-model="capitalRealAmount"-->
+                                       <!--required pattern="^\d+(?:.\d{1,2})?$">-->
+                                <!--<span class="input-group-addon">元</span>-->
+                            <!--</div>-->
+                            <!--<span class="help-block text-danger"-->
+                                  <!--ng-show="step2.capital_real_amount.$invalid">-->
+                                  <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;实际向资方还款为数字(最多两位小数)，且必填-->
+                            <!--</span>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="form-group clearfix">-->
+                        <!--<label class="col-lg-4 control-label text-right margin-top">处理备注</label>-->
+                        <!--<div class="col-lg-8">-->
+                             <!--<textarea class="form-control" required name="handle_remark" ng-model="handleRemark" cols="9" style="height: 200px">-->
+                            <!--</textarea>-->
+                            <!--<span class="help-block text-danger"-->
+                                  <!--ng-show="step2.handle_remark.$invalid">-->
+                                  <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;处理备注必填-->
+                            <!--</span>-->
+                        <!--</div>-->
+
+                    <!--</div>-->
+
+                <!--</form>-->
+            <!--</div>-->
+            <!--<div class="modal-footer text-center">-->
+                <!--<button type="button" class="btn btn-success w-lg" ng-disabled="step2.$invalid"-->
+                        <!--ng-click="loanexceptionExcute.baddebtSave(storeAdvancePrincipal,capitalRealAmount,handleRemark,item)">-->
+                    <!--提交-->
+                <!--</button>-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
+<!--</div>-->
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    异常催收详情
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">借款单号：</td>
+                        <td class="v-middle w-xl">{{ profile.loanSn }}</td>
+                        <td class="v-middle text-right w-sm">客户名称:</td>
+                        <td class="v-middle w-xl">{{ profile.debtorName }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">联系方式：</td>
+                        <td class="v-middle w-xl">{{ profile.debtorMobile }}</td>
+                        <td class="v-middle text-right w-sm">服务门店:</td>
+                        <td class="v-middle w-xl">{{ profile.department_label }}</td>
+                    </tr>
+
+                    <tr>
+                        <td class="v-middle text-right w-sm">客户剩余应还金额：</td>
+                        <td class="v-middle w-xl">{{ profile.debtorLeftAmount }}</td>
+                        <td class="v-middle text-right w-sm">处理状态：</td>
+                        <td class="v-middle w-xl">{{ profile.state.label }}</td>
+                        <!--<td class="v-middle text-right w-sm">客户已还金额：</td>-->
+                        <!--<td class="v-middle w-xl">{{profile.debtorRepayAmount}}</td>-->
+
+                    </tr>
+                    <tr>
+                        <!--<td class="v-middle text-right w-sm">处理状态：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.state.label }}</td>-->
+                        <td class="v-middle text-right w-sm">处理时间：</td>
+                        <td class="v-middle w-xl">{{ profile.finishAt?(profile.finishAt | datetime):'未处理' }}</td>
+                        <td class="v-middle text-right w-sm"></td>
+                        <td class="v-middle w-xl"></td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">处理原因：</td>
+                        <td class="v-middle w-xl" colspan="3">{{ profile.handleRemark?profile.handleRemark:"暂无" }}</td>
+
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">异常催收原因1：</td>
+                        <td class="v-middle w-xl" colspan="3">{{ profile.exceptionRemark?profile.exceptionRemark:"暂无" }}</td>
+
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

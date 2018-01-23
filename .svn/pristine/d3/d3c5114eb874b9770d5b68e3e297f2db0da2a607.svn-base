@@ -1,0 +1,397 @@
+<script>
+    "use strict";
+    app.controller("managerListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state) {
+
+                $scope.states = [];
+                $scope.state = {};
+
+                entity.getList("/rest/userWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+
+                        angular.forEach($scope.states,function(state, index){
+                            if(state.stateCode === "ENABLED"){
+                                $scope.state = state;
+                            }
+                        });
+
+                        $scope.state_code = $scope.state.stateCode;
+
+                        $scope.getList(0);
+                    }
+                });
+
+                //初始化分页参数
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                /*
+                 * 获取实体列表
+                 * @author  金杭
+                 * @param   {number}  页码
+                 * @return  无
+                 * */
+
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    //全部筛选
+                    //var link = "/rest/users/search/listStateOwnDepartmentAndChildren?size=20&page=" + page;
+
+                    //有状态时的筛选路由
+                    //if($scope.state_code){
+                    var link = "/rest/users/search/findAllByRoleNot?role_code=USER&sort=id,desc&size=10&stateCode=" + $scope.state_code + "&page=" + page;
+                    //}
+
+                    entity.getList(link, ["state", "department", "role"]).then(function (resResult) {
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult._embeddedItems);
+                        console.log($scope.list,'list')
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.page.size,
+                                total_elements: resResult.page.totalElements,
+                                current_page: resResult.page.number,
+                                num_page: resResult.page.totalPages,
+                                total_page: resResult.page.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#manager_list_paginator", $scope.pageList, $scope.getList);
+
+                    });
+                };
+
+                //状态筛选
+                $scope.stateSelect = function (state) {
+                    $scope.state_code = state.stateCode;
+                    $scope.getList(0);
+                };
+
+                $scope.form = {};
+
+                $scope.roles       = [];
+                $scope.departments = [];
+
+                $scope.form.role       = null;
+                $scope.form.department = null;
+
+                $scope.clearForm = function () {
+                    $scope.form = {};
+                    angular.forEach($scope.states, function (state, index) {
+                        if (state.stateCode === "ENABLED") {
+                            $scope.form.state = state;
+                        }
+                    });
+                };
+
+                //获取部门和角色列表
+                entity.getList("rest/roles?size=10000").then(function (response) {
+                    $scope.roles = response._embeddedItems;
+                });
+
+                entity.getList("rest/departments").then(function (response) {
+                    $scope.departments = response._embeddedItems;
+                });
+
+                $scope.addSubmit = function () {
+
+                    $http({
+                        method: 'POST',
+                        url: '/rest/users',
+                        data: {
+                            act: "create",
+                            username: String($scope.form.username),
+                            password: $scope.form.username.substring($scope.form.username.length - 6, $scope.form.username.length),
+                            passwordAgain: $scope.form.username.substring($scope.form.username.length - 6, $scope.form.username.length),
+                            nickname: $scope.form.nickname,
+                            sex: Number($scope.form.sex),
+                            department: $scope.form.department ? $scope.form.department._links.self.href : null,
+                            role: $scope.form.role ? $scope.form.role._links.self.href : null,
+                            state: $scope.form.state ? $scope.form.state._links.self.href : null,
+                            workflow: "rest/userWorkflows/" + $stateParams.workflow_id
+                        }
+                    }).success(function (response) {
+                        $state.reload();
+                        $rootScope.toasterSuccess("成功！", "操作成功！");
+                    });
+
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="managerListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <form class="form-inline">
+                    <div class="form-group m-r">
+                        <label for="manager_state" style="width:57px;text-align:right;">状态：</label>
+                        <select ng-model="state"
+                                class="form-control input-sm" style="width:150px;"
+                                id="manager_state"
+                                ng-options="state.label for state in states"
+                                ng-change="stateSelect(state)">
+                        </select>
+                    </div>
+                    <div class="pull-right inline">
+                        <button class="btn btn-sm btn-danger btn-addon" data-toggle="modal" data-target="#add_user"
+                                ng-click="clearForm()">
+                            <i class="fa fa-star"></i>
+                            新建
+                        </button>
+                    </div>
+                </form>
+                <div class="modal fade" id="add_user">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                                <h4 class="modal-title" id="createDepartModal">新建后台用户</h4>
+                            </div>
+                            <div class="modal-body">
+                                <form name="manager_form">
+                                    <div class="form-group">
+                                        <label><span class="text-danger">*</span>手机号码（用作登录用户名）</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               name="mobile"
+                                               autocomplete="off"
+                                               required
+                                               ng-model="form.username"
+                                               pattern="^(\+\d{2,3})?1(3|4|7|5|8)([0-9]{9})$">
+                                        <span class="help-block text-danger"
+                                              ng-show="manager_form.mobile.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的手机号，且必填
+                                        </span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="text-danger">*</span>真实姓名</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               name="name"
+                                               autocomplete="off"
+                                               required
+                                               ng-model="form.nickname">
+                                        <span class="help-block text-danger"
+                                              ng-show="manager_form.name.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;姓名为必填
+                                        </span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="text-danger">*</span>性别</label>
+                                        <div>
+                                            <label class="checkbox-inline i-checks">
+                                                <input type="radio" name="sex" value="1" ng-model="form.sex"><i></i> 男
+                                            </label>
+                                            <label class="checkbox-inline i-checks">
+                                                <input type="radio" name="sex" value="2" ng-model="form.sex"><i></i> 女
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="text-danger">*</span>选择部门</label>
+                                        <select type="text"
+                                                class="form-control"
+                                                autocomplete="off"
+                                                name="department"
+                                                ng-options="department.label for department in departments"
+                                                ng-model="form.department"
+                                                required></select>
+                                        <span class="help-block text-danger"
+                                              ng-show="manager_form.department.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;部门为必填
+                                        </span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="text-danger">*</span>选择角色</label>
+                                        <select type="text"
+                                                class="form-control"
+                                                autocomplete="off"
+                                                name="role"
+                                                ng-options="role.label for role in roles"
+                                                ng-model="form.role"
+                                                required></select>
+                                        <span class="help-block text-danger"
+                                              ng-show="manager_form.role.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;角色为必填
+                                        </span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="text-danger">*</span>选择状态</label>
+                                        <select class="form-control"
+                                                autocomplete="off"
+                                                name="state"
+                                                ng-options="state.label for state in states"
+                                                ng-model="form.state"
+                                                required></select>
+                                        <span class="help-block text-danger"
+                                              ng-show="manager_form.state.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;状态为必填
+                                        </span>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        data-dismiss="modal"
+                                        ng-disabled="manager_form.$invalid"
+                                        ng-click="addSubmit()">确定
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light" style="border-bottom: none;">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>序号</th>
+                                            <th>手机（用户名）</th>
+                                            <th>姓名</th>
+                                            <th>性别</th>
+                                            <th>所属部门</th>
+                                            <th>用户角色</th>
+                                            <th>状态</th>
+                                            <!--<th>创建时间</th>-->
+                                            <th>最后更新时间</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle clearfix">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>
+                                                        </li>
+                                                        <li><a ui-sref="workflowEntity.form({id:item.id})">编辑</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.id }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.username }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.nickname }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.sex === 1?"男":"女" }}
+                                            </td>
+                                            <td class="v-middle list-hover-a">
+                                                <a ui-sref="auditEntity.home.profile.info({id:item.department.id,entity_key:'department'})">
+                                                    {{
+                                                    item.department.id?item.department.label?item.department.label:"名称未知":"未选择"
+                                                    }}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.role.id?item.role.label?item.role.label:"名称未知":"未分配" }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.state.id?item.state.label?item.state.label:"状态名称未知":"无" }}
+                                            </td>
+                                            <!--<td class="v-middle">-->
+                                            <!--{{ item.createdAt | datetime }}-->
+                                            <!--</td>-->
+                                            <td class="v-middle">
+                                                {{ item.lastModifiedAt | datetime }}
+                                            </td>
+
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="manager_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }}
+                    条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

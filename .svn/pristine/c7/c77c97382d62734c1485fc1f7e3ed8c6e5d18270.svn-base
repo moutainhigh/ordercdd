@@ -1,0 +1,122 @@
+package com.liyang.controller.domain;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.annotation.Resource;
+
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype.DepartmenttypeCode;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.storebonus.StoreBonus;
+import com.liyang.domain.storebonus.StoreBonusRepository;
+import com.liyang.util.CommonUtil;
+import com.liyang.util.SearchByTimes;
+
+@RestController
+@RequestMapping("/storebonus")
+public class StoreBonusController {
+	@Resource
+	private StoreBonusRepository repository;
+	@Resource
+	private DepartmentRepository departmentRepository;
+	
+	@RequestMapping("/search")
+	public EntityPage search(@RequestParam(required=false) Map<String,Object> params) throws TimeConditiosException {
+		GenericQueryExpSpecification<StoreBonus> queryExpression = new GenericQueryExpSpecification<StoreBonus>();
+		//状态
+		queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"),true));
+		//操作人，创建人
+		queryExpression.add(QueryExpSpecificationBuilder.eq("createdBy.id", params.get("user_id"),true));
+		//所属门店
+		if (params.get("department_label")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("department.label", 
+					params.get("department_label").toString(),true));
+		}
+		//单号
+		if (params.get("storebonusSn")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("storebonusSn", params.get("storebonusSn").toString(),true));
+		}
+
+		//根据时间查询
+		if(params.get("timeRangeKey")!=null){
+			SearchByTimes.addTimesConditions(params,queryExpression);
+		}
+		limitField(queryExpression);
+		Page<StoreBonus> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+		String[] fields = new String[] {"id","label","createdAt","lastModifiedAt","state",
+				"department","user","realityAmount","lastModifiedBy","files","bonusTime","ordercdd","storebonusSn"};
+		return convertCustom(EntityPageUtil.convert(page, fields));
+	}
+	
+	private EntityPage convertCustom(EntityPage page) {
+		List<Map<String,Object>> entities = page.getEntitys();
+		if (entities==null) {
+			return page;
+		}
+		EntityPage newPage = page.clone();
+		for (Map<String, Object> map : entities) {
+			if (map==null) {
+				continue;
+			}
+			//自定义的转换，订单
+			Object files = map.get("files");
+			if (files instanceof Set<?>) {
+				Set<?> set = (Set<?>) files;
+				if (set==null||(set.size()==0)) {
+					map.put("storebonus_file_length", 0);
+				}else {
+					map.put("storebonus_file_length", set.size());
+				}
+				map.remove("files");
+			}
+
+			Object department1 = map.get("department");
+			if (department1 instanceof Department){
+				Department department2 = (Department) department1;
+				map.put("linkman",department2.getLinkman());
+				map.put("telephone",department2.getTelephone());
+				map.remove("department");
+			}
+			
+			//自定义的转换，订单
+			Object ordercdd = map.get("ordercdd");
+			if (ordercdd instanceof Ordercdd) {
+				Ordercdd obj = (Ordercdd) ordercdd;
+				if (obj!=null) {
+					map.put("ordercdd_cddsn", obj.getCddSn());
+					map.put("ordercdd_realName", obj.getRealName());
+					map.put("ordercdd_applyAmount", obj.getApplyAmount());
+				}
+				map.remove("ordercdd");
+			}
+
+			newPage.add(map);
+		}
+		return newPage;
+	}
+	/**
+     * 限制权限，例如：部门、角色等
+     */
+    private void limitField(GenericQueryExpSpecification<StoreBonus> queryExpression) {
+    	Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+    	//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+    	//门店，暂时认为非平台的
+    	if(curDepartmentId.equals(company.getId())) {//如果登录人部门是平台，只查平台一审和平台二审的
+    	}else {//查询其他状态的
+			queryExpression.add(QueryExpSpecificationBuilder.eq("department.id", 
+					curDepartmentId, true));
+		}
+	}
+}

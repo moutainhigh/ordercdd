@@ -1,0 +1,733 @@
+<script>
+    app.controller("productFormController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+
+                $scope.form_id     = $stateParams.id;
+                $scope.workflow_id = $stateParams.workflow_id;
+
+                $scope.form = {};
+
+                $scope.forms = {};
+
+                $scope.formCompany = {};
+
+                $scope.capitalproduct = null;
+
+                //判断是否有产品 如果没有无法保存
+                $scope.productSelf = null;
+
+                /*
+                 * state
+                 * */
+                $scope.allStates = null;
+                $scope.state     = null;
+
+
+                $scope.feetypeStore   = [];
+                $scope.feetypeCompany = [];
+
+
+                //获取所有自己创建的银行卡
+                $scope.bankcardFuntion = function () {
+                    entity.getList("rest/bankcards/search/listStateOwnDepartmentAndChildren?stateCode=ENABLED&sort=lastModifiedAt,desc&size=9999&page=0").then(function (resResult) {
+                        $scope.bankcards = resResult._embeddedItems;
+                        if ($stateParams.id) {
+                            $scope.bankcard = entity.getSelectedMyOwn($scope.bankcards, $scope.form.repaymentAccount);
+                        } else {
+                            $scope.bankcard = $scope.bankcards[0];
+                        }
+                    });
+                };
+
+                //获取罚息规则
+                $scope.punishinterestruleFuntion = function () {
+                    entity.getList("/rest/punishinterestrules").then(function (resResult) {
+                        $scope.punishinterestrules = resResult._embeddedItems;
+                        if ($stateParams.id) {
+                            $scope.punishinterestrule = entity.getSelectedMyOwn($scope.punishinterestrules, $scope.form.punishinterestrule);
+                        } else {
+                            $scope.punishinterestrule = $scope.punishinterestrules[0];
+                        }
+                    });
+                };
+
+
+                entity.getList("getEntityInfo").then(function (response) {
+
+                    $rootScope.allEntitiesInfo = response;
+
+
+                    if ($stateParams.id) {
+
+                        entity.getDetail("rest/products/" + $stateParams.id, ["state", "repaymentAccount", "workflow"]).then(function (resResult) {
+
+                            $scope.form = resResult;
+
+//                            $scope.form.storeInterest = $scope.form.storeInterest/100;
+//                            $scope.form.debtorInterest = $scope.form.debtorInterest/100;
+
+                            $scope.productSelf = resResult._links.self.href;
+
+                            /*贷款分期时间单位*/
+                            $scope.periodCode = $rootScope.allEntitiesInfo.capitalproduct.periodCode.values;
+                            /*还款规则*/
+                            $scope.repaymentMethodCode = $rootScope.allEntitiesInfo.capitalproduct.repaymentMethodCode.values;
+
+                            $scope.periodCodeVal          = $scope.periodCode[$scope.form.periodCode];
+                            $scope.repaymentMethodCodeVal = $scope.repaymentMethodCode[$scope.form.repaymentMethodCode];
+
+
+                            //获取所有状态
+                            entity.getList("rest/productStates").then(function (resResult) {
+                                $scope.allStates = resResult._embeddedItems;
+                                //获取当前状态
+                                $scope.state     = entity.getSelectedMyOwn($scope.allStates, $scope.form.state);
+                            });
+
+
+                            $scope.bankcardFuntion();
+
+                            //获取罚息规则
+                            $scope.punishinterestruleFuntion();
+
+
+                            //获取所有费用项目
+                            entity.getList("rest/feetypes").then(function (resResult1) {
+                                $scope.feetypes       = resResult1._embeddedItems;
+                                $scope.feetypeStore   = [];
+                                $scope.feetypeCompany = [];
+                                angular.forEach(resResult1._embeddedItems, function (val, key) {
+                                    if (val.type == "1") {
+                                        $scope.feetypeCompany.push(val);
+                                    } else if (val.type == "0") {
+                                        $scope.feetypeStore.push(val)
+                                    }
+                                });
+                                console.log('lf')
+                                console.log($scope.feetypeCompany);
+
+
+                                angular.forEach($scope.feetypeStore, function (val, key) {
+                                    console.log(val);
+                                    $scope.forms[val.feetypeCode]          = {};
+                                    $scope.forms[val.feetypeCode].isPeriod = "false";
+                                    $scope.forms[val.feetypeCode].isRefund = "false";
+                                });
+
+
+                                //获取自己已经添加的收费项目
+                                if ($stateParams.id) {
+                                    entity.getList("rest/products/" + $scope.form_id, ["productstorefees"]).then(function (resResult2) {
+                                        angular.forEach(resResult2.productstorefees._embeddedItems, function (val, key) {
+//                                            val.feeRate = val.feeRate*100;
+                                            $scope.forms[val.feetypeCode]          = val;
+                                            $scope.forms[val.feetypeCode].isPeriod = val.isPeriod.toString();
+                                            $scope.forms[val.feetypeCode].isRefund = val.isRefund.toString();
+                                            $scope.forms[val.feetypeCode].update   = true;
+                                        });
+                                    });
+                                }
+
+
+                                //获取已经添加的收费项目
+                                if ($stateParams.id) {
+                                    entity.getList("rest/products/" + $scope.form_id, ["productcompanyfees"]).then(function (resResult2) {
+                                        angular.forEach(resResult2.productcompanyfees._embeddedItems, function (val, key) {
+//                                            val.feeRate = val.feeRate*100;
+                                            $scope.formCompany[val.feetypeCode]        = val;
+                                            $scope.formCompany[val.feetypeCode].isPeriod = val.isPeriod.toString();
+                                            $scope.formCompany[val.feetypeCode].isRefund = val.isRefund.toString();
+                                            $scope.formCompany[val.feetypeCode].update = true;
+                                        });
+                                    });
+                                }
+
+
+                                //获取自己已经添加的收费项目
+//                                entity.getList("rest/productstorefees").then(function (resResult2) {
+//
+//                                    angular.forEach(resResult2._embeddedItems, function (val, key) {
+//                                        $http.get(val._links.product.href).success(function (resResult) {
+//                                            if (resResult) {
+//                                                if (resResult.id === $scope.form.id) {
+//                                                    $scope.forms[val.feetypeCode]        = val;
+//                                                    $scope.forms[val.feetypeCode].update = true;
+//                                                }
+//                                            }
+//                                        });
+//                                    });
+//                                });
+
+                                //获取已经添加的收费项目
+//                                entity.getList("rest/productcompanyfees", ["product"]).then(function (resResult2) {
+//
+//                                    console.log(resResult2);
+//                                    angular.forEach(resResult2._embeddedItems, function (val, key) {
+//                                        if (JSON.stringify(val.product) !== "{}" && angular.isObject(val.product)) {
+//                                            if (val.product.id === $scope.form.id) {
+//                                                $scope.formCompany[val.feetypeCode]        = val;
+//                                                $scope.formCompany[val.feetypeCode].update = true;
+//                                            }
+//                                        }
+//                                    });
+//                                });
+
+                            });
+                        });
+
+                    } else {
+
+                        entity.getList("rest/capitalproducts/search/listStateOwnDepartmentAndChildren?stateCode=ENABLED&sort=lastModifiedAt,desc&size=9999&page=0").then(function (resResult) {
+                            $scope.capitalproducts = resResult._embeddedItems;
+                            $scope.capitalproduct  = $scope.capitalproducts[0];
+                        });
+
+
+                        //获取所有新建费用
+                        entity.getList("rest/feetypes").then(function (resResult) {
+                            $scope.feetypes = resResult._embeddedItems;
+                        });
+
+                        entity.getList("/rest/productWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                            $scope.allStates = resResult._embeddedItems;
+                            $scope.state     = $scope.allStates[0];
+                        });
+
+                        console.log($scope.capitalproducts);
+                        $scope.form = {};
+
+                    }
+                });
+
+                $scope.productSave = function () {
+
+                    var feeList = [];
+                    angular.forEach($scope.forms, function (val, key) {
+                        if ((val.feeAmount && val.feeAmount >= 0 ) || (val.feeRate && val.feeRate>=0)) {
+                            val.feetypeCode = key;
+                            if (val.feeRate) {
+                                val.feeRate = (val.feeRate).toString();
+                            }else if(val.feeRate==0){
+                                val.feeRate =null;
+                            }
+                            if (val.feeAmount) {
+                                val.feeAmount = val.feeAmount.toString();
+                            }
+                            if( val.fee){
+                                val.feetype     = val.fee.id.toString();
+                            }
+                            val.feetypeCode = key;
+
+                            feeList.push(val)
+                        }
+                    });
+
+                    $scope.form.fees = [];
+                    $scope.form.fees = feeList;
+
+
+                    $scope.form.submitType = "store";
+
+//                    $scope.form.storeInterest = $scope.form.storeInterest/100;
+//                    $scope.form.debtorInterest = $scope.form.debtorInterest/100;
+
+                    $http({
+                        url: $scope.form._links.self.href,
+                        method: "PATCH",
+                        data: $scope.form
+                    }).success(function (resResult) {
+                        console.log(resResult);
+
+                        $state.go("workflowEntity.list", {
+                            entity_key: "product",
+                            workflow_id: $stateParams.workflow_id
+                        }, {reload: true});
+                        $rootScope.toasterSuccess("成功！", "修改成功！");
+                    });
+
+//
+
+
+//                    $scope.form.capitalproduct = $scope.capitalproduct ? $scope.capitalproduct._links.self.href : null;
+//                    $scope.form.state          = $scope.state ? $scope.state._links.self.href : null;
+//                    $scope.form.workflow       = "/rest/productWorkflows/" + $stateParams.workflow_id;
+//
+//                    if ($scope.form._links) {
+//
+//                        $scope.form.act = "update";
+//                        $http({
+//                            url: $scope.form._links.self.href,
+//                            method: "PATCH",
+//                            data: $scope.form
+//                        }).success(function (resResult) {
+//                            $state.go("workflowEntity.list", {
+//                                entity_key: "product",
+//                                workflow_id: $stateParams.workflow_id
+//                            }, {reload: true});
+//                            $scope.productSelf = resResult._links.self.href;
+//                            $rootScope.toasterSuccess("成功！", "修改成功！");
+//                            $state.reload();
+//                        });
+//                    } else {
+//                        $scope.form.act = "create";
+//                        $http.post("rest/products", $scope.form).success(function (resResult) {
+//                            $state.go("workflowEntity.list", {
+//                                entity_key: "product",
+//                                workflow_id: $stateParams.workflow_id
+//                            }, {reload: true});
+//                            $rootScope.toasterSuccess("成功！", "新建成功！");
+//                            $state.reload();
+//                            $scope.productSelf = resResult._links.self.href;
+//                        });
+//                    }
+
+                };
+
+//                $scope.productChargeSave = function () {
+//
+//                    console.log($scope.forms);
+//                    if ($scope.productSelf) {
+//                        angular.forEach($scope.forms, function (val, key) {
+//                            if (val.periodNumber) {
+//                                if (val.feeAmount && val.feeRate) {
+//                                    val.feeAmount = null;
+//                                }
+//
+//                                //feetype
+//                                val.feetype     = val.fee._links.self.href;
+//                                val.feetypeCode = key;
+//
+//                                //product
+//                                val.product = $scope.productSelf;
+//
+//                                //提交判断是否是修改还是新建
+//                                if (val.update == true) {
+//                                    $http({
+//                                        url: val._links.self.href,
+//                                        method: "PATCH",
+//                                        data: val
+//                                    }).success(function (resResult) {
+//                                        $rootScope.toasterSuccess("成功！", "修改成功！");
+//                                    });
+//                                } else {
+//                                    $http.post("rest/productstorefees", val).success(function (resResult) {
+//                                        if (resResult) {
+//                                            $rootScope.toasterSuccess("成功！", "新建成功！");
+//                                            val.update = true
+//                                        }
+//                                    });
+//                                }
+//                            }
+//                        });
+//                        $state.reload();
+//                    } else {
+//                        $rootScope.toasterError("错误！", "请先新建产品")
+//                    }
+//
+//
+//                };
+//
+//                $scope.productChargeDelete = function (fee) {
+//                    console.log(fee)
+//                    if (fee) {
+//                        $rootScope.sweetConfirm({
+//                            title: "提示",
+//                            text: "你是否要删除这条收费项目！",
+//                            type: "warning",
+//                            callback: function () {
+//                                $http({
+//                                    method: "DELETE",
+//                                    url: "rest/productstorefees/" + fee.id
+//                                }).success(function (resResult) {
+//                                    $rootScope.toasterInfo("成功！", "删除成功");
+//                                    $state.reload();
+//                                });
+//                            }
+//                        })
+//                    }
+//                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="productFormController">
+    <!-- column -->
+    <div class="col">
+        <div class="vbox">
+            <div class="wrapper b-b b-light">
+                <div class="font-thin h4">
+                    <span translate="product.self.label"></span>{{ form._links?"修改":"新建" }}
+                </div>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <div class="panel panel-success">
+                                        <div class="panel-heading">
+                                            基础设置
+                                        </div>
+                                        <div class="panel-body">
+                                            <form name="product_form" class="form-horizontal">
+                                                <div class="row">
+                                                    <div class="col-xs-4 col-xs-offset-1 m-t">
+
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label">
+                                                                <span class="text-danger">*</span>
+                                                                <span translate="product.label.label"></span>
+                                                            </label>
+                                                            <div class="col-sm-8">
+                                                                <input type="text"
+                                                                       class="form-control"
+                                                                       name="label"
+                                                                       ng-model="form.label"
+                                                                       disabled>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label">
+                                                                <span class="text-danger">*</span>
+                                                                <span translate="product.storeAmountMax.label"></span>
+                                                            </label>
+                                                            <div class="col-sm-8">
+                                                                <div class="input-group">
+                                                                    <input type="text"
+                                                                           class="form-control"
+                                                                           name="storeAmountMax"
+                                                                           ng-model="form.storeAmountMax"
+                                                                           disabled>
+                                                                    <span class="input-group-addon">元</span>
+                                                                </div>
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label">
+                                                                <span class="text-danger">*</span>
+                                                                <span translate="product.storeAmountMin.label"></span>
+                                                            </label>
+                                                            <div class="col-sm-8">
+                                                                <div class="input-group">
+                                                                    <input type="text"
+                                                                           class="form-control"
+                                                                           name="storeAmountMin"
+                                                                           ng-model="form.storeAmountMin"
+                                                                           disabled
+                                                                    >
+                                                                    <span class="input-group-addon">元</span>
+                                                                </div>
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group" ng-if="repaymentShow">
+                                                            <label class="col-sm-4 control-label"
+                                                                   translate="product.periodCode.self.label"></label>
+                                                            <div class="col-sm-8">
+                                                                <select ng-model="periodCodeVal"
+                                                                        class="form-control m-b"
+                                                                        ng-options=" y.label for (x,y) in periodCode"
+                                                                        id="product_periodCode"
+                                                                        name="product_periodCode">
+                                                                </select>
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group" ng-if="repaymentShow">
+                                                            <label class="col-sm-4 control-label"
+                                                                   translate="product.periodNumber.label"></label>
+                                                            <div class="col-sm-8">
+                                                                <div class="input-group">
+                                                                    <input type="text" class="form-control"
+                                                                           ng-model="form.periodNumber"
+                                                                           id="product_periodNumber"
+                                                                           name="product_periodNumber"
+                                                                           disabled
+                                                                    >
+                                                                    <span class="input-group-addon">期</span>
+                                                                </div>
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label">
+                                                                <span class="text-danger">*</span>
+                                                                <span translate="product.storeInterest.label"></span>
+                                                            </label>
+                                                            <div class="col-sm-8">
+                                                                <!--<div class="input-group">-->
+                                                                    <input type="text"
+                                                                           class="form-control"
+                                                                           name="storeInterest"
+                                                                           ng-model="form.storeInterest"
+                                                                           disabled>
+                                                                    <!--<span class="input-group-addon"></span>-->
+                                                                <!--</div>-->
+
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label">
+                                                                <span class="text-danger">*</span>
+                                                                <span translate="product.debtorInterest.label"></span>
+                                                            </label>
+                                                            <div class="col-sm-8">
+                                                                <!--<div class="input-group">-->
+                                                                    <input type="text"
+                                                                           class="form-control"
+                                                                           name="debtorInterest"
+                                                                           ng-model="form.debtorInterest"
+                                                                           disabled>
+                                                                    <!--<span class="input-group-addon"></span>-->
+                                                                <!--</div>-->
+
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xs-5 col-xs-offset-1 m-t">
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label"
+                                                                   translate="product.overdueGraceDays.label"></label>
+                                                            <div class="col-sm-8">
+                                                                <div class="input-group">
+                                                                    <input type="text" class="form-control"
+                                                                           ng-model="form.overdueGraceDays"
+                                                                           id="product_overdueGraceDays"
+                                                                           name="product_overdueGraceDays"
+                                                                           disabled>
+                                                                    <span class="input-group-addon">天</span>
+                                                                </div>
+
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label"
+                                                                   translate="product.description.label"></label>
+                                                            <div class="col-sm-8">
+                                                        <textarea class="form-control" cols="30" rows="7"
+                                                                  ng-model="form.description" disabled></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label class="col-sm-4 control-label">
+                                                                <span class="text-danger">*</span>
+                                                                <span translate="product.sort.label"></span>
+                                                            </label>
+                                                            <div class="col-sm-8">
+                                                                <input type="text"
+                                                                       class="form-control"
+                                                                       name="sort"
+                                                                       ng-model="form.sort"
+                                                                       disabled>
+
+                                                            </div>
+                                                        </div>
+                                                        <!--<div class="form-group" ng-if="form_id">-->
+                                                        <!--<label class="col-sm-4 control-label">-->
+                                                        <!--<span class="text-danger">*</span>-->
+                                                        <!--<span translate="product.state.label"></span>-->
+                                                        <!--</label>-->
+                                                        <!--<div class="col-sm-8">-->
+                                                        <!--<select class="form-control"-->
+                                                        <!--name="state"-->
+                                                        <!--ng-model="state"-->
+                                                        <!--ng-options="state.label for state in allStates"-->
+                                                        <!--disabled></select>-->
+
+                                                        <!--</div>-->
+                                                        <!--</div>-->
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!--  公司收费项目 -->
+                                <div class="col-xs-12">
+                                    <div class="panel panel-success">
+                                        <div class="panel-heading">
+                                            公司收费项目
+                                        </div>
+                                        <table class="table table-striped m-b-none">
+                                            <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th>收费项目名称</th>
+                                                <th>分期</th>
+                                                <th>按比例收费(优先)</th>
+                                                <th>固定收费</th>
+                                                <th>可退收费</th>
+                                                <th>说明</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr ng-repeat="fee in feetypeCompany">
+                                                <td class="v-middle">
+
+                                                </td>
+                                                <td class="v-middle">
+                                                    {{ fee.label }}
+                                                </td>
+                                                <td class="v-middle">
+                                                    {{ formCompany[fee.feetypeCode].isPeriod==true?'分期':'不分期' }}
+                                                </td>
+                                                <td class="v-middle">
+                                                    {{ formCompany[fee.feetypeCode].feeRate }}
+                                                </td>
+                                                <td class="v-middle">
+                                                    {{ formCompany[fee.feetypeCode].feeAmount }}
+                                                </td>
+                                                <td class="v-middle">
+                                                    {{ formCompany[fee.feetypeCode].isRefund==true?'可退':'不可退' }}
+                                                </td>
+                                                <td class="v-middle">
+                                                    {{ formCompany[fee.feetypeCode].comment }}
+                                                </td>
+
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="col-xs-12">
+                                    <div class="panel panel-success">
+                                        <div class="panel-heading">
+                                            门店收费项目
+                                        </div>
+                                        <div class="panel-body">
+                                            <!--<form class="form-horizontal">-->
+                                            <!--<div class="form-group" ng-repeat="fee in feetypes">-->
+                                            <!--<label class="col-sm-4 control-label">{{ fee.label }}</label>-->
+                                            <!--<div class="col-sm-8">-->
+                                            <!--<input type="text" ng-model="forms[fee.feetypeCode]"-->
+                                            <!--class="form-control"-->
+                                            <!--required>-->
+                                            <!--</div>-->
+                                            <!--</div>-->
+                                            <!--</form>-->
+
+                                            <form class="form-horizontal" name="product_feetype_form">
+                                                <table class="table table-hover b-light" style="border-bottom: none;">
+                                                    <thead>
+                                                    <tr>
+                                                        <th></th>
+                                                        <th>收费项目名称</th>
+                                                        <th>分期</th>
+                                                        <th>按比例收费(优先)</th>
+                                                        <th>固定收费</th>
+                                                        <th>描述</th>
+                                                        <th>说明</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr ng-repeat="fee in feetypeStore">
+                                                        <td class="v-middle">
+
+                                                        </td>
+                                                        <td class="v-middle text-center">
+                                                            {{ fee.label }}
+                                                        </td>
+                                                        <td class="v-middle text-center">
+                                                            <select ng-model="forms[fee.feetypeCode].isPeriod"
+                                                                    class="form-control w">
+                                                                <option value="true">分期</option>
+                                                                <option value="false">不分期</option>
+                                                            </select>
+                                                        </td>
+                                                        <td class="v-middle text-center">
+                                                            <!--<input type="text" ng-model="forms[fee.feetypeCode].feeRate"-->
+                                                            <!--class="form-control w"-->
+                                                            <!--&gt;-->
+                                                            <!--<div class="input-group w">-->
+                                                            <input type="text" ng-model="forms[fee.feetypeCode].feeRate" pattern="^(\d+(\.\d{1,3})?)$" name="{{fee.feetypeCode + 'feeRate'}}"
+                                                                   class="form-control w"
+                                                            >
+                                                            <div class="text-left">
+                                                                    <span class="help-block text-danger"
+                                                                          ng-show="product_feetype_form[fee.feetypeCode + 'feeRate'].$invalid">
+                                                                        <i class="fa fa-exclamation-circle text-danger"></i>&ensp;最多填写三位小数
+                                                                    </span>
+                                                            </div>
+                                                            <!--<span class="input-group-addon"></span>-->
+                                                            <!--</div>-->
+
+                                                        </td>
+                                                        <td class="v-middle text-center">
+                                                            <input type="text"
+                                                                   ng-model="forms[fee.feetypeCode].feeAmount" pattern="^(\d+(\.\d{1,3})?)$" name="{{fee.feetypeCode + 'feeAmount'}}"
+                                                                   class="form-control w"
+                                                            >
+                                                            <div class="text-left">
+                                                                <span class="help-block text-danger"
+                                                                      ng-show="product_feetype_form[fee.feetypeCode + 'feeAmount'].$invalid">
+                                                                    <i class="fa fa-exclamation-circle text-danger"></i>&ensp;数字，最多三位小数
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="v-middle text-center">
+                                                            <!--<input type="text" ng-model="forms[fee.feetypeCode].isRefund"-->
+                                                            <!--class="form-control"-->
+                                                            <!--required>-->
+                                                            <select ng-model="forms[fee.feetypeCode].isRefund"
+                                                                    class="form-control w">
+                                                                <option value="true">可退</option>
+                                                                <option value="false">不可退</option>
+                                                            </select>
+                                                        </td>
+                                                        <td class="v-middle text-center">
+                                                            <input type="text" ng-model="forms[fee.feetypeCode].comment"
+                                                                   class="form-control w"
+                                                                   required>
+                                                            <span style="display: none">
+                                                           {{ forms[fee.feetypeCode].fee = fee }}
+                                                        </span>
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                            </form>
+
+                                            <!--<div class="col-xs-12 text-center m-t-md">-->
+                                            <!--<button type="button" ng-click="productChargeSave()"-->
+                                            <!--class="btn btn-primary">保存-->
+                                            <!--</button>-->
+                                            <!--</div>-->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row m-b">
+                                <div class="col-xs-12 text-center">
+                                    <button ui-sref="workflowEntity.list({entity_key:'product',workflow_id:workflow_id})"
+                                            class="btn btn-default">返回
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-primary"
+                                            ng-click="productSave()">
+                                        保存
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

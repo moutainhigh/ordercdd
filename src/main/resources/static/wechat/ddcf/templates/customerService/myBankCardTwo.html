@@ -1,0 +1,39 @@
+<div class="page-bd-15">
+    <form name="bankOneForm">
+        <div class="weui_cells weui_cells_form" style="padding-top: 60px;">
+            <div class="weui_cell">
+                <div class="weui_cell_hd"><label class="weui_label">手机号</label></div>
+                <div class="weui_cell_bd weui_cell_primary">
+                    <input name="mobile" ng-model="mobile" class="weui_input" type="tel"  placeholder="请输入手机号" maxlength="11"  required/>
+                </div>
+            </div>
+            <div class="weui_cell weui_vcode">
+                <div class="weui_cell_hd"><label class="weui_label">验证码</label></div>
+                <div class="weui_cell_bd weui_cell_primary">
+                    <input ng-model="vCode" class="weui_input" type="tel" placeholder="请输入验证码" maxlength="4" minlength="4" required/>
+                </div>
+                <div class="weui_cell_ft">
+                    <button style="background: #fff;border: none; border-left: 1px solid #e8e8e8" href="javascript:;" class="weui-vcode-btn" ng-click="vCodeBtn()" ng-class="{true: 'cdd_vCode', false: 'cdd_vCode_active'}[config.css]" ng-disabled="config.disabled">{{config.vCodeName}}</button>
+                </div>
+            </div>
+            <div style="border-top:1px solid #ECECEC;transform-origin: 0 100%;margin-left: 14px; "></div>
+        </div>
+        <button style="margin-top:55px;" ng-class="{true: 'weui_btn weui_btn_primary', false: 'weui_btn btn_disabled'}[bankOneForm.$valid]" class="weui_btn weui_btn_primary" ng-disabled="!bankOneForm.$valid">完成</button>
+    </form>
+</div>
+<style scoped>
+    .weui_cells:before{
+        border: none;
+    }
+    .weui_cells:after{
+        border: none;
+    }
+    .weui_btn:after{
+        border: none;
+    }
+    .btn_disabled
+    {
+        background: #D5D5D5;
+        color: #fff;
+    }
+</style>

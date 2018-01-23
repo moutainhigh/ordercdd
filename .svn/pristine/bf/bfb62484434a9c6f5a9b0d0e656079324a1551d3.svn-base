@@ -1,0 +1,222 @@
+<script>
+    "use strict";
+    app.controller("creditcardListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, entity) {
+
+                $scope.states = [];
+
+                entity.getList("/rest/creditcardWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+
+                        $scope.state_code = $scope.states[0].stateCode;
+                        $scope.getList(0);
+                    }
+                });
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                /*默认读取列表*/
+
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    //var link = "/rest/creditcards/search/listOwnDepartmentAndChildren?sort=lastModifiedAt,desc&size=10&page=" + page;
+
+                    //if($scope.state_code){
+                    var link = "/rest/creditcards/search/listStateOwnDepartmentAndChildren?sort=id,desc&stateCode=" + $scope.state_code + "&size=10&page=" + page;
+                    //}
+
+                    entity.getList(link).then(function (resResult) {
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult._embeddedItems);
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.page.size,
+                                total_elements: resResult.page.totalElements,
+                                current_page: resResult.page.number,
+                                num_page: resResult.page.totalPages,
+                                total_page: resResult.page.totalPages
+                            };
+                        }else{
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#creditcard_list_paginator", $scope.pageList, $scope.getList);
+
+                    });
+                };
+
+                $scope.stateSelect = function ($event, stateCode) {
+                    if ($event.target.nodeName === "INPUT") {
+                        $scope.state_code = stateCode;
+                        $scope.getList(0);
+                    }
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="creditcardListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <!--<div class="wrapper b-b clearfix">-->
+            <!--<div class="pull-left m-r w inline">-->
+            <!--<label class="sr-only" for=""></label>-->
+            <!--<input type="text" class="form-control" id="">-->
+            <!--</div>-->
+            <!--<div class="pull-left m-r w inline">-->
+            <!--<label class="sr-only" for=""></label>-->
+            <!--<input type="text" class="form-control" id="">-->
+            <!--</div>-->
+            <!--<div class="pull-left m-r w inline">-->
+            <!--<label class="sr-only" for=""></label>-->
+            <!--<input type="text" class="form-control" id="">-->
+            <!--</div>-->
+            <!--<div class="pull-left m-r inline">-->
+            <!--<button class="btn btn-primary btn-addon">-->
+            <!--<i class="fa fa-search"></i>-->
+            <!--查询-->
+            <!--</button>-->
+            <!--</div>-->
+            <!--</div>-->
+            <div class="wrapper b-b clearfix">
+                <div class="inline pull-left">
+                    <span translate="creditcard.self.label"></span>状态：
+                </div>
+                <!--<div class="inline pull-left m-r">-->
+                <!--<label class="i-checks i-checks-sm pull-left m-n" ng-click="stateSelect($event,'')">-->
+                <!--<input type="radio" name="state" checked><i></i>  全部-->
+                <!--</label>-->
+                <!--</div>-->
+                <div class="inline pull-left m-r" ng-repeat="state in states">
+                    <label class="i-checks i-checks-sm pull-left m-n" ng-click="stateSelect($event,state.stateCode)">
+                        <input type="radio" name="state"><i></i> {{ state.label }}
+                    </label>
+                </div>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light" style="border-bottom: none;">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>序号</th>
+                                            <th>姓名</th>
+                                            <th>手机号</th>
+                                            <th>身份证</th>
+                                            <th>创建时间</th>
+                                            <th>最后修改时间</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle clearfix">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>
+                                                        </li>
+                                                        <li><a ui-sref="workflowEntity.form({id:item.id})">编辑</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.id }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.name }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.telephone }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.identity }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.createdAt | datetime}}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.lastModifiedAt | datetime }}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="creditcard_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }} 条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

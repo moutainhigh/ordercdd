@@ -1,0 +1,67 @@
+package com.liyang.controller.domain;
+
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.creditcard.Creditcard;
+import com.liyang.domain.creditcard.CreditcardRepository;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype.DepartmenttypeCode;
+import com.liyang.util.CommonUtil;
+
+@RestController
+@RequestMapping("/creditcard")
+public class CreditcardController {
+	@Resource
+	private CreditcardRepository repository;
+	@Resource
+	private DepartmentRepository departmentRepository;
+	
+	@RequestMapping("/search")
+	public EntityPage search(@RequestParam(required=false) Map<String,Object> params) throws TimeConditiosException {
+		GenericQueryExpSpecification<Creditcard> queryExpression = new GenericQueryExpSpecification<Creditcard>();
+
+		//状态
+		queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"),true));
+		//账户号码
+		if (params.get("creditcardIdentity")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("creditcardIdentity", params.get("creditcardIdentity").toString(),true));
+		}
+		//手机号
+		if (params.get("nickname")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("user.nickname", params.get("nickname").toString(),true));
+		}
+		limitField(queryExpression);
+		Page<Creditcard> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+		String[] fields = new String[] {"id","label","createdAt","lastModifiedAt","state",
+				"creditcardIdentity","creditGrant","creditBalance","creditFrozen","creditTemporary","creditTemporaryDate",
+				"user","allowLoanNumber","allowDebtorLoan","expiryDate"};
+
+		return EntityPageUtil.convert(page, fields);
+	}
+	
+	/**
+     * 限制权限，例如：部门、角色等
+     */
+    private void limitField(GenericQueryExpSpecification<Creditcard> queryExpression) {
+    	Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+    	//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+    	//门店，暂时认为非平台的
+    	if(curDepartmentId.equals(company.getId())) {//如果登录人部门是平台，只查平台一审和平台二审的
+    	}else {//查询其他状态的
+			queryExpression.add(QueryExpSpecificationBuilder.eq("ordercdd.createdByDepartment.id", 
+					curDepartmentId, true));
+		}
+	}
+}

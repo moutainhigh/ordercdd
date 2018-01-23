@@ -1,0 +1,75 @@
+package com.liyang.controller.domain;
+
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype;
+import com.liyang.util.CommonUtil;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.domain.person.Person;
+import com.liyang.domain.person.PersonRepository;
+
+/**
+ * 消费产品
+ */
+@RestController
+@RequestMapping("/person")
+public class PersonController {
+    @Resource
+    private PersonRepository repository;
+    @Resource
+    private DepartmentRepository departmentRepository;
+    @RequestMapping("/search")
+    public EntityPage search(@RequestParam(required=false) Map<String,Object> person) {
+        GenericQueryExpSpecification<Person> queryExpression = new GenericQueryExpSpecification<Person>();
+        //状态
+        queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", person.get("state_id"),true));
+
+        //客户姓名
+        if (person.get("name")!=null) {
+            queryExpression.add(QueryExpSpecificationBuilder.like("name", person.get("name").toString(),true));
+        }
+
+        //联系电话
+        if (person.get("telephone")!=null) {
+            queryExpression.add(QueryExpSpecificationBuilder.like("telephone", person.get("telephone").toString(),true));
+        }
+
+        //身份证
+        if (person.get("identity")!=null) {
+            queryExpression.add(QueryExpSpecificationBuilder.like("identity", person.get("identity").toString(),true));
+        }
+        limitField(queryExpression);
+        Page<Person> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(person));
+
+        String[] fields = new String[] {"id","label","name","telephone","identity","createdAt","lastModifiedAt","state"};
+        return EntityPageUtil.convert(page, fields);
+    }
+
+
+
+    /**
+     * @Description 角色权限部门控制等
+     * @author jianger
+     * @Date 2017/12/19 下午2:08
+     **/
+    private  void limitField(GenericQueryExpSpecification<Person> queryExpSpecification){
+        Integer personId= CommonUtil.getCurrentUserDepartment().getId();
+
+        Department department=departmentRepository.findByDepartmenttypeCode(Departmenttype.DepartmenttypeCode.COMPANY);
+
+        if(!personId.equals(department.getId())){
+            queryExpSpecification.add(QueryExpSpecificationBuilder.eq("createdByDepartment.id",personId,true));
+        }
+    }
+    
+}

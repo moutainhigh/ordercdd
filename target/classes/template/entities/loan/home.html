@@ -1,0 +1,154 @@
+<script>
+    app.controller("loanHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile = {};
+                $scope.canActs = [];
+                $scope.feetypes    = [];
+                //历史贷款信息
+                $scope.historyLoan = {};
+
+                $scope.feetypes          = [];
+                $scope.feetypeStore      = [];
+
+                $scope.productVal = {};
+                $scope.productCompanyFeeList = [];
+
+
+                entity.getDetail("/rest/loans/" + $scope.id + "/ordercdd", ["createdBy", "state", "person", "workflow", "product", "serviceUser","loan","feebackups"]).then(function (resResult) {
+                        console.log(resResult,'a');
+                    $scope.profile = resResult;
+
+//                    //获取所有费用项目
+//                    entity.getList("rest/feetypes").then(function (resResult1) {
+//                        angular.forEach(resResult1._embeddedItems, function (val,key) {
+//                            if (val.type == "1") {
+//                                $scope.feetypes.push(val)
+//                            }
+//                        });
+//                    });
+
+
+                    //获取所有费用项目
+                    entity.getList("rest/feetypes").then(function (resResult1) {
+                        angular.forEach(resResult1._embeddedItems, function (val, key) {
+                            if (val.type == "1") {
+                                $scope.feetypes.push(val)
+                            } else if (val.type == '0') {
+                                $scope.feetypeStore.push(val);
+                            }
+                        });
+
+                        angular.forEach($scope.feetypeStore, function (val, key) {
+                            angular.forEach($scope.profile.feebackups._embeddedItems, function (val1, key1) {
+                                if (val.feetypeCode == val1.feetypeCode) {
+                                    val.isPeriod = val1.isPeriod.toString();
+                                    val.isRefund = val1.isRefund.toString();
+
+                                    val.comment = val1.comment
+                                    val.periodNumber = val1.periodNumber
+                                    if (val1.feeRate) {
+                                        val.isRepayment = "true";
+                                        val.feeVal      = val1.feeRate;
+                                    } else if (val1.feeAmount) {
+                                        val.feeVal      = val1.feeAmount;
+                                        val.isRepayment = "false";
+                                    }
+
+                                }
+                            });
+
+                        })
+
+                        /* 历史贷款信息*/
+                        $http({
+                            method: "GET",
+                            url: "/ordercddDomain/detailOrder?ordercddId=" + $stateParams.id
+                        }).success(function (res) {
+                            $scope.historyLoan = res;
+                        });
+
+                        entity.getList($scope.profile.product._links.productcompanyfees.href).then(function (resResult1) {
+                            if(resResult1._embeddedItems.length>0){
+                                $scope.productCompanyFeeList = resResult1._embeddedItems;
+                                angular.forEach($scope.feetypes, function (val, key) {
+                                    angular.forEach($scope.productCompanyFeeList, function (val1, key1) {
+                                        if (val.feetypeCode == val1.feetypeCode) {
+                                            val.isPeriod = val1.isPeriod.toString();
+                                            val.isRefund = val1.isRefund.toString();
+                                            val.periodNumber = val1.periodNumber
+                                            if (val1.feeRate) {
+                                                val.isRepayment = "true";
+                                                val.feeVal      = val1.feeRate;
+                                            } else if (val1.feeAmount) {
+                                                val.feeVal      = val1.feeAmount;
+                                                val.isRepayment = "false";
+                                            }
+                                            val.comment = val1.comment
+                                        }
+                                    });
+                                })
+                            }
+
+                        })
+
+
+                    });
+
+
+
+                });
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "退出",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "loan"}, {reload: true});
+                        });
+                    });
+                };
+
+
+                /*大方法的对象*/
+                $scope.loanExcute = {
+                    /*放款*/
+                    "loan": function () {
+                        $scope.patchAct("success", "这条贷款是否放款", "/rest/loans/" + $scope.id, {act: "loan",loanType:"ORDERCDD"});
+                    },
+
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loanHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

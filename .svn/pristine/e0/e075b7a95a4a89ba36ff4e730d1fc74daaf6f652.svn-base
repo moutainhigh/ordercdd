@@ -1,0 +1,345 @@
+<script>
+    "use strict";
+    app.controller("loanexceptionListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                $scope.profile_id = null;
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "取消",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "loan"}, {reload: true});
+                        });
+                    });
+                };
+
+                /*
+               * 上传文件表头
+               * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipName = "";
+
+                /*大方法的对象*/
+                $scope.loanexceptionExcute = {
+                    /*放款*/
+                    "loan": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否放款", "/rest/loans/" + profile.id, {
+                            act: "loan",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /* 上传凭证*/
+                    "uploadMaterials": function (profile) {
+                        $scope.profile_id        = profile.id;
+                        $scope.actCode           = "uploadMaterials";
+                        $scope.headerInformation = "上传凭证";
+                        $scope.promptInformation = "只能上传一张图片";
+                        $scope.uploader.clearQueue();
+                        $("#" + profile.id + "_upload").modal("show");
+                    },
+//                    /*同意确定*/
+                    "confirmInformation": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否同意", "/rest/loans/" + profile.id, {
+                            act: "confirmInformation",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /*转正常*/
+                    "exceptionover": function (profile) {
+
+                        console.log(profile)
+                        $("#" + profile.id + "_normal").modal("show");
+                    },
+
+                    /*转正常理由加改变状态*/
+                    "handleRemark": function (handleRemark, profile) {
+                        if (handleRemark) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/loanexceptions/" + profile.id,
+                                data: {
+                                    act: "exceptionover",
+                                    handleRemark: handleRemark,
+//                                    notice: profile.serviceUser.id
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_normal").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "loanexception"}, {reload: true});
+                                $rootScope.toasterInfo("成功！", "已改为正常处理！");
+                            });
+
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的正常处理理由！");
+                        }
+                    },
+
+
+                    /*催收转坏账*/
+                    "baddebt": function (profile) {
+                        console.log(profile)
+                        $http({
+                            method: "GET",
+                            url: "loan/count?loanId=" + profile.id
+                        }).success(function (resResult) {
+                            console.log(resResult)
+
+                            $scope.baddebtVal = resResult;
+                            $("#" + profile.id + "_baddebt").modal("show");
+                        });
+
+                    },
+                    /*确定*/
+                    "baddebtSave": function (storeAdvancePrincipal, capitalRealAmount, handleRemark, profile) {
+                        console.log(profile)
+                        swal({
+                            title: "是否确定转坏账",
+                            type: "success",
+                            showCancelButton: true,
+                            cancelButtonText: "退出",
+                            confirmButtonText: "同意",
+                            closeOnConfirm: true
+                        }, function () {
+                            $("#" + profile.id + "_baddebt").modal("hide");
+                            $http({
+                                method: "GET",
+                                url: "loan/count?loanId=" + profile.id
+                            }).success(function (resResult1) {
+                                $http({
+                                    method: "POST",
+                                    url: "rest/baddebts",
+                                    data: {
+                                        storeAdvancePrincipal: storeAdvancePrincipal,
+                                        act: "baddebt",
+                                        capitalRealAmount: capitalRealAmount,
+                                        comment: handleRemark,
+                                        debtorLeftAmount: resResult1.debtorLeftAmount,
+                                        debtorRepayAmount: resResult1.debtorRepayAmount,
+                                        storeAdvanceInterest: resResult1.storeAdvanceInterest,
+                                        loan: "rest/loans/" + profile.loanId
+                                    }
+                                }).success(function (resResult) {
+                                    $rootScope.toasterSuccess("成功", "已经成功转为坏账！");
+                                    $http({
+                                        method: "PATCH",
+                                        url: "/rest/loanexceptions/" + profile.id,
+                                        data: {
+                                            act: "baddebt"
+                                        }
+                                    }).success(function (resResult) {
+                                    });
+
+                                    $state.go("workflowEntity.list", {entity_key: "loanexception"}, {reload: true});
+                                });
+                            });
+
+                        });
+
+                    }
+
+
+
+                    /*转坏账*/
+//                    "baddebt": function (profile) {
+//
+//                        console.log(profile)
+//                        $("#" + profile.id + "_badDebt").modal("show");
+//                    },
+
+                    /*转坏账由加改变状态*/
+//                    "storeAdvancePrincipal": function (handleRemark,storeAdvancePrincipal, profile) {
+//                        if (handleRemark) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/loanexceptions/" + profile.id,
+//                                data: {
+//                                    act: "baddebt",
+//                                    handleRemark: handleRemark,
+//                                    storeAdvancePrincipal: storeAdvancePrincipal
+//                                }
+//                            }).success(function (resResult) {
+//                                $("#" + profile.id + "_badDebt").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "loanexception"}, {reload: true});
+//                                $rootScope.toasterInfo("成功！", "已改为坏账处理！");
+//                            });
+//
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请填写详细的坏账处理理由！");
+//                        }
+//                    }
+                };
+
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+                $scope.uploader      = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 1;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    fileItem.actCode = $scope.actCode;
+
+                    fileItem.formData = [{fileType: "file"}];
+
+                    $("#audit_zip_file_input").val("");
+
+                };
+
+                $scope.uploader.onErrorItem   = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+//
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    //删除图片
+
+                    $http({
+                        method: "GET",
+
+                        url: "/rest/loans/" + $scope.profile_id + "/files"
+                    }).success(function (resResult) {
+
+                        $scope.filesLength = resResult._embedded.loanFiles;
+                        $scope.pictureId   = null;
+
+                        if ($scope.filesLength.length > 0) {
+                            $scope.pictureId = resResult._embedded.loanFiles[0].id;
+                            $http({
+                                method: "DELETE",
+
+                                url: "/rest/loanFiles/" + $scope.pictureId + "/log"
+                            }).success(function (resResult) {
+                                $http({
+                                    method: "DELETE",
+                                    url: "/rest/loanFiles/" + $scope.pictureId
+                                }).success(function (resResult) {
+//                                        console.log(resResult)
+                                    $("#storeBonus_upload_one_photo").modal("hide");
+//
+                                    if (fileItem.actCode === "uploadMaterials") {
+                                        $scope.zipName = response.result.newFileName;
+                                        $http({
+                                            method: "PATCH",
+                                            url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+                                            data: {
+                                                fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                                act: fileItem.actCode//上传文件的行为
+                                            }
+                                        }).success(function (data) {
+
+                                            $("#" + $scope.profile_id + "_upload").modal("hide");
+
+                                            $http({
+                                                method: "PATCH",
+                                                url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+                                                data: {
+                                                    act: "loan",
+                                                    loanType: "ORDERCDD"
+                                                }
+                                            }).success(function (date) {
+                                                $state.reload(true);
+                                                $rootScope.toasterSuccess("成功", "放款成功");
+                                            })
+
+                                        });
+                                    }
+
+                                });
+                            });
+
+                        } else {
+                            if (fileItem.actCode === "uploadMaterials") {
+                                $scope.zipName = response.result.newFileName;
+                                $http({
+                                    method: "PATCH",
+                                    url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+                                    data: {
+                                        fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                        act: fileItem.actCode//上传文件的行为
+                                    }
+                                }).success(function (data) {
+
+                                    $("#" + $scope.profile_id + "_upload").modal("hide");
+
+                                    $http({
+                                        method: "PATCH",
+                                        url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+                                        data: {
+                                            act: "loan",
+                                            loanType: "ORDERCDD"
+                                        }
+                                    }).success(function (date) {
+                                        $state.reload(true);
+                                        $rootScope.toasterSuccess("成功", "放款成功");
+                                    })
+                                });
+                            }
+                        }
+
+
+                    });
+                };
+
+                /* 查看凭证
+                * */
+
+                $scope.uploadOnePhoto = function (id) {
+
+                    $scope.pictureId = id;
+//                    $scope.modalMaxPhoto = null;
+                    $http({
+                        method: "GET",
+                        url: "/rest/loans/" + id + "/files"
+                    }).success(function (res) {
+                        $scope.modalMaxPhoto = res._embedded.loanFiles[0];
+//                        console.log(res._embedded.loansFiles[0],'345')
+                        $("#loans_upload_one_photo").modal("show");
+                    });
+                };
+
+            }
+        ]
+    );
+</script>
+
+
+<div ng-controller="loanexceptionListModuleController" class="h-full" ui-view></div>

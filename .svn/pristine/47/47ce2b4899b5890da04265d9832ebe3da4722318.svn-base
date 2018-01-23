@@ -1,0 +1,426 @@
+<script>
+    "use strict";
+    app.controller("loanexceptionListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "entity",
+            "$stateParams",
+            function ($rootScope, $scope, $http, entity, $stateParams) {
+
+                $scope.states = [];
+
+                /*搜索值的对象*/
+                $scope.searchForms = {};
+
+                $scope.forms = {};
+
+                /*初始值*/
+                $scope.forms.state_id = $scope.state_id;
+                $scope.forms.size     = "10";
+                $scope.forms.sort     = "id,desc";
+
+                // 转正常原因
+                $scope.handleRemark = '';
+                // 转坏账原因
+                $scope.storeAdvancePrincipal = '';
+
+//                $scope.exceptionReson.exception = $scope.exceptionArr[0];
+
+                entity.getList("/rest/loanexceptionWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+                        $scope.states     = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+                        console.log($scope.states)
+
+                        if (window.sessionStorage.getItem(window.myinfo.id + "loanexception_state_code")) {
+                                angular.forEach($scope.states, function (val, key) {
+                                if (val.id == window.sessionStorage.getItem(window.myinfo.id + "loanexception_state_code")) {
+                                    $scope.stateVal       = $scope.states[key];
+                                    $scope.forms.state_id = val.id;
+                                    $scope.state_id       = val.id;
+                                    $scope.getList(0);
+                                }
+                            })
+                        } else {
+                            $scope.forms.state_id = null;
+                            $scope.getList(0);
+                        }
+                    }
+                });
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    $scope.forms.page = page;
+
+
+                    $http.get("/loanexception/search", {
+                        params: $scope.forms
+                    }).success(function (resResult) {
+
+                        console.log(resResult,'kk')
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult.entitys);
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.size,
+                                total_elements: resResult.totalElements,
+                                current_page: resResult.number,
+                                num_page: resResult.totalPages,
+                                total_page: resResult.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#loanexception_list_paginator", $scope.pageList, $scope.getList);
+                    });
+                };
+
+                //状态
+                $scope.stateChange = function (val) {
+                    $scope.forms = {};
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "id,desc";
+                    if(val){
+                        window.sessionStorage.setItem(window.myinfo.id + "loanexception_state_code", val.id);
+                        $scope.state_id = val.id;
+
+                        $scope.forms.state_id = val.id;
+                        // $scope.getList(0);
+                    }else {
+
+                        window.sessionStorage.setItem(window.myinfo.id + "loanexception_state_code", "");
+                        $scope.state_id = null;
+                        $scope.forms.state_id = null;
+                    }
+                };
+
+                //                搜索
+                $scope.searchSubmit = function () {
+                    /*合并对象*/
+                    $scope.forms = Object.assign($scope.searchForms,$scope.forms);
+
+                    $scope.getList(0)
+
+                };
+
+                //清除搜索
+                $scope.clearSearch = function () {
+                    $scope.forms = {};
+                    $scope.searchForms = {};
+
+                    if($scope.state_id){
+                        $scope.forms.state_id = $scope.state_id;
+                    }else {
+                        $scope.forms.state_id = null;
+                    }
+
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "id,desc";
+                    $scope.getList(0);
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loanexceptionListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b">
+                <form class="form-inline">
+                    <div class="clearfix">
+                        <div class="form-group m-r">
+                            <label for="searchCreditorDepartment">处理状态：</label>
+                            <select ng-model="stateVal"
+                                    id="searchCreditorDepartment"
+                                    class="form-control input-sm" style="width:150px;"
+                                    ng-options="y.label for (x,y) in states"
+                                    ng-change="stateChange(stateVal)"
+                            >
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <div class="form-group m-r">
+                            <label for="loanexceptionDebtorName">客户姓名：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="loanexceptionDebtorName"
+                                   ng-model="searchForms.debtorName">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="loanexceptionDebtorMobile">联系方式：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="loanexceptionDebtorMobile"
+                                   ng-model="searchForms.debtorMobile">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="loanexceptionLoanSn">借款单号：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="loanexceptionLoanSn"
+                                   ng-model="searchForms.loanSn">
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <button class="btn btn-sm btn-primary m-r" ng-click="searchSubmit()">
+                            <i class="fa fa-search"></i>
+                            查询
+                        </button>
+                        <button class="btn btn-sm btn-default m-r" ng-click="clearSearch()">
+                            <i class="fa fa-refresh"></i>
+                            清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner" >
+                        <div class="wrapper">
+                            <div class="panel panel-default" >
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light" style="border-bottom: none;">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>序号</th>
+                                            <th>借款单号</th>
+                                            <th>客户名称</th>
+                                            <th>联系方式</th>
+                                            <th>服务门店</th>
+                                            <th>处理状态</th>
+                                            <th>处理时间</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle clearfix">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>
+                                                        </li>
+                                                        <li ng-repeat="act in item.listActs track by $index"
+                                                            ng-click="loanexceptionExcute[act.actCode](item)">
+                                                            <a>{{act.label}}</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+
+                                                <!--转正常-->
+                                                <div class="modal fade" id="{{ item.id }}_normal" tabindex="-1" role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写正常原因</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-2 text-right">理由</label>
+                                                                    <div class="col-lg-10">
+                                                                        <textarea class="form-control" ng-model="handleRemark" cols="9" style="height: 250px">
+                                                                        </textarea>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="loanexceptionExcute.handleRemark(handleRemark,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!--转坏账-->
+                                                <div class="modal fade" id="{{ item.id }}_baddebt" tabindex="-1" role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写转坏账信息</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <form name="step2" class="form-horizontal form-validation">
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">客户总共剩余应还</label>
+                                                                        <div class="col-lg-6">
+                                                                            <label style="font-size: 24px;">
+                                                                                {{ baddebtVal.debtorLeftAmount }} 元
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">门店垫付利息</label>
+                                                                        <div class="col-lg-6">
+                                                                            <label style="font-size: 24px;">
+                                                                                {{ baddebtVal.storeAdvanceInterest }} 元
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">门店垫付本金</label>
+                                                                        <div class="col-lg-8">
+                                                                            <div class="input-group">
+                                                                                <input type="text"
+                                                                                       name="store_advance_principal"
+                                                                                       class="form-control"
+                                                                                       ng-model="storeAdvancePrincipal"
+                                                                                       required pattern="^\d+(?:.\d{1,2})?$">
+                                                                                <span class="input-group-addon">元</span>
+                                                                            </div>
+                                                                            <span class="help-block text-danger"
+                                                                                  ng-show="step2.store_advance_principal.$invalid">
+                                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;门店垫付本金为数字(最多两位小数)，且必填
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <!--<div class="form-group clearfix">-->
+                                                                    <!--<label class="col-lg-4 control-label text-right margin-top">坏账亏损</label>-->
+                                                                    <!--<div class="col-lg-6">-->
+                                                                    <!--<label style="font-size: 24px;">-->
+                                                                    <!--元-->
+                                                                    <!--</label>-->
+                                                                    <!--</div>-->
+                                                                    <!--</div>-->
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">实际向资方还款</label>
+                                                                        <div class="col-lg-8">
+                                                                            <div class="input-group">
+                                                                                <input type="text"
+                                                                                       name="capital_real_amount"
+                                                                                       class="form-control"
+                                                                                       ng-model="capitalRealAmount"
+                                                                                       required pattern="^\d+(?:.\d{1,2})?$">
+                                                                                <span class="input-group-addon">元</span>
+                                                                            </div>
+                                                                            <span class="help-block text-danger"
+                                                                                  ng-show="step2.capital_real_amount.$invalid">
+                                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;实际向资方还款为数字(最多两位小数)，且必填
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="form-group clearfix">
+                                                                        <label class="col-lg-4 control-label text-right margin-top">处理备注</label>
+                                                                        <div class="col-lg-8">
+                                                                             <textarea class="form-control" required name="handle_remark" ng-model="handleRemark" cols="9" style="height: 200px">
+                                                                            </textarea>
+                                                                            <span class="help-block text-danger"
+                                                                                  ng-show="step2.handle_remark.$invalid">
+                                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;处理备注必填
+                                                                            </span>
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                </form>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg" ng-disabled="step2.$invalid"
+                                                                        ng-click="loanexceptionExcute.baddebtSave(storeAdvancePrincipal,capitalRealAmount,handleRemark,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.id }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.loanSn }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.debtorName }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.debtorMobile }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.department_label }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.state_label }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.finishAt?(item.finishAt | datetime):'无'}}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="loanexception_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }} 条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

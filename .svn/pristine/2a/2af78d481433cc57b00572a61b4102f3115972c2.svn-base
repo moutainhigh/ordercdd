@@ -1,0 +1,157 @@
+package com.liyang.controller.domain;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.creditrepayment.Creditrepayment;
+import com.liyang.domain.creditrepayment.CreditrepaymentRepository;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype.DepartmenttypeCode;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.user.User;
+import com.liyang.util.CommonUtil;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject.Level;
+import com.liyang.util.SearchByTimes;
+
+@RestController
+@RequestMapping("/creditrepayment")
+public class CreditrepaymentController {
+    @Resource
+    private CreditrepaymentRepository repository;
+    @Resource
+    private DepartmentRepository departmentRepository;
+
+    @RequestMapping("/search")
+    public EntityPage search(@RequestParam(required = false) Map<String, Object> params) throws TimeConditiosException {
+        GenericQueryExpSpecification<Creditrepayment> queryExpression = new GenericQueryExpSpecification<Creditrepayment>();
+        //状态
+        queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"), true));
+        //授权门店，创建人部门
+        if (params.get("department_label") != null) {
+            queryExpression.add(QueryExpSpecificationBuilder.like("loan.ordercdd.createdByDepartment.label",
+                    params.get("department_label").toString(), true));
+        }
+        //借款人姓名
+        if (params.get("debtorName") != null) {
+            queryExpression.add(QueryExpSpecificationBuilder.like("loan.debtorName",
+                    params.get("debtorName").toString(), true));
+        }
+        //借款单号
+        if (params.get("loanSn") != null) {
+            queryExpression.add(QueryExpSpecificationBuilder.like("loanSn", params.get("loanSn").toString(), true));
+        }
+
+        //根据时间查询
+        if(params.get("timeRangeKey")!=null){
+            SearchByTimes.addTimesConditions(params,queryExpression);
+        }
+        limitField(queryExpression);
+        Page<Creditrepayment> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+        String[] fields = new String[]{"id", "label", "createdAt", "lastModifiedAt", "state", "orderSn", "loan", "planSn", "debtorName",
+                "debtorRepaymentDate", "debtorActualRepaymentDate", "fees", "mentSn","realAmount","files","repaymentType"};
+        return convertCustom(EntityPageUtil.convert(page, fields));
+    }
+
+    private EntityPage convertCustom(EntityPage page) {
+        List<Map<String, Object>> entities = page.getEntitys();
+        if (entities == null) {
+            return page;
+        }
+        EntityPage newPage = page.clone();
+        for (Map<String, Object> map : entities) {
+            if (map == null) {
+                continue;
+            }
+            Object loan1 = map.get("loan");
+            if (loan1 instanceof Loan) {
+                Loan loan2 = (Loan) loan1;
+                map.put("loanSn", loan2.getLoanSn());
+                map.put("user_id",loan2.getServiceUser().getId());
+                map.put("person_id",loan2.getDebtorPerson().getId());
+                map.remove("loan");
+
+                Department store = loan2.getOrdercdd().getCreatedByDepartment();
+                String storeName=null;
+                if(store != null){
+                    storeName=store.getLabel();
+                }
+                map.put("service_department",storeName);
+            }
+            
+            //自定义的转换，订单
+			Object files = map.get("files");
+			map.remove("files");
+			if (files != null) {
+				Set<?> set = (Set<?>) files;
+				if (set==null||(set.size()==0)) {
+					map.put("file_length", 0);
+				}else {
+					map.put("file_length", set.size());
+				}
+			}
+            newPage.add(map);
+        }
+
+        return newPage;
+    }
+    
+    /**
+     * 限制权限，例如：部门、角色等
+     */
+    private void limitField(GenericQueryExpSpecification<Creditrepayment> queryExpression) {
+    	Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+    	//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+    	//门店，暂时认为非平台的
+    	if(curDepartmentId.equals(company.getId())) {//如果登录人部门是平台，只查平台一审和平台二审的
+    	}else {//查询其他状态的
+			queryExpression.add(QueryExpSpecificationBuilder.eq("loan.ordercdd.createdByDepartment.id", 
+					curDepartmentId, true));
+		}
+	}
+    
+    @RequestMapping("/label")
+    public List<Map<String, Object>> findLabelList(Integer id) {
+		if (id == null) {
+			throw new FailReturnObject(1, "ID不能为null", Level.ERROR);
+		}
+		List<Map<String, Object>> list = new ArrayList<>();
+		Set<Creditrepayment> set = repository.findMentList(id);
+		if (set == null) {
+			return list;
+		}
+		for (Creditrepayment creditrepayment : set) {
+			Map<String,Object> map = new HashMap<>();
+			if (StringUtils.isBlank(creditrepayment.getLabel())) {
+				continue;
+			}
+			map.put("label", creditrepayment.getLabel());
+			map.put("lastModifiedAt", DateFormatUtils.format(creditrepayment.getLastModifiedAt(), "yyyy-MM-dd HH:mm:ss"));
+			User user = creditrepayment.getLastModifiedBy();
+			if (user == null) {
+				map.put("lastModifiedBy", "");
+			}else {
+				map.put("lastModifiedBy", user.getNickname());
+			}
+			list.add(map);
+		}
+		return list;
+	}
+}

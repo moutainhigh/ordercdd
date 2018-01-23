@@ -1,0 +1,116 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="vehicleExcute[act.actCode]()"
+            tooltip="{{act.help}}"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+    <div class="modal fade" id="vehicle_update_gps_status">
+        <div class="modal-xs modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">更改GPS状态</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-2 text-right">请选择</label>
+                        <div class="col-lg-10">
+                            <select class="form-control"
+                                    ng-model="gpsStatus"
+                                    ng-change="changeGpsStatus(gpsStatus)"
+                                    ng-options="status.text for status in gpsStatuses" required>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="vehicleExcute.gpsStatusSave()">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="wrapper">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            车辆详情
+        </div>
+        <table class="table table-striped m-b-none">
+            <tbody>
+            <tr>
+                <td class="v-middle text-right w-sm">GPS状态：</td>
+                <td class="v-middle">{{ profile.gpsStatus | gpsStatus }}</td>
+                <td class="v-middle text-right w-sm">GPS编号：</td>
+                <td class="v-middle">{{ profile.gpscode | nullToString }}</td>
+            </tr>
+            <tr>
+                <td class="v-middle text-right w-sm">拥有人：</td>
+                <td class="v-middle">{{ profile.person.name }}</td>
+                <td class="v-middle text-right w-sm">公里数：</td>
+                <td class="v-middle">{{ profile.vehicleKm }} 万公里</td>
+            </tr>
+            <tr>
+                <td class="v-middle text-right w-sm">车牌号：</td>
+                <td class="v-middle w-xl">{{ profile.plateNumber }}</td>
+                <td class="v-middle text-right w-sm">车辆型号：</td>
+                <td class="v-middle w-xl">{{ profile.vehicleModel }}</td>
+            </tr>
+            <tr>
+                <td class="v-middle text-right w-sm">上牌区域：</td>
+                <td class="v-middle w-xl">{{profile.vehicleProvince}} {{profile.vehicleCity}}</td>
+                <td class="v-middle text-right w-sm">车辆年份：</td>
+                <td class="v-middle w-xl">{{profile.vehicleDate?(profile.vehicleDate | toLocalMonth):"没有填时间" }}</td>
+            </tr>
+            <tr>
+                <td class="v-middle text-right w-sm">年检到期日：</td>
+                <td class="v-middle">{{ profile.annualSurveyMaturity?(profile.annualSurveyMaturity |
+                    toLocalDate):"没有填时间" }}
+                </td>
+                <td class="v-middle text-right w-sm">保单到期日：</td>
+                <td class="v-middle">{{ profile.annualPolicyMaturity?(profile.annualPolicyMaturity |
+                    toLocalDate):"没有填时间" }}
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="wrapper" ng-if="getGpsStatusLog.length > 0">
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            GPS更改记录
+        </div>
+        <table class="table table-striped m-b-none">
+            <thead>
+            <tr>
+                <th></th>
+                <th>操作时间</th>
+                <th>操作人</th>
+                <th>记录</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="log in getGpsStatusLog">
+                <td class="v-middle"></td>
+                <td class="v-middle">
+                    {{ log.cretae_at | datetime }}
+                </td>
+                <td class="v-middle">
+                    {{ log.nickname }}
+                </td>
+                <td class="v-middle">
+                    {{ log.gpsStatus | gpsLogToString }}
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

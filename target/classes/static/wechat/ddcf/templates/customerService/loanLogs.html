@@ -1,0 +1,12 @@
+<div style="padding: 15px;height: 100%;background: #F1F0F5">
+        <div ng-repeat="repamentData in repamentDatas" style="padding: 20px 15px; margin-top:10px;border: 1px solid #EDECEF;background: #fff;border-radius: 5px;">
+            <div class="clearfix">
+                <p class="left" style="font-weight: bold">还款金额</p><p class="left" style="color: #09bb07;margin-left: 10px;font-size: 16px" ng-if="repamentData.state">还款成功</p>
+                <p class="right" style="color: #39B637">{{repamentData.fees}}元</p>
+            </div>
+            <div class="clearfix" style="margin-top: 20px;border-top: 1px dashed #e8e8e8;padding-top: 15px;">
+                <p class="left">流水单号:{{repamentData.mentSn}}</p>
+                <p class="right" style="color: #a8a8a8">{{(repamentData.debtorActualRepaymentDate).split('T')[0]}}</p>
+            </div>
+        </div>
+</div>

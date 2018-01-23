@@ -1,0 +1,21 @@
+<div style="background: #F1F0F5;height: 100%">
+    <div class="weui_cell" style="background: #fff;">
+        <div class="weui_cell_hd"><label class="weui_label">还款金额</label></div>
+        <div class="weui_cell_bd weui_cell_primary">
+            <input ng-model="fees" class="weui_input" type="tel" readonly>
+        </div>
+    </div>
+    <div class="weui_cells" style="margin-top: 0">
+        <div class="weui_cells_title">还款凭证</div>
+        <div class="weui_cell">
+            <div id="grcl">
+                <img ng-show="imgshow" src="{{imgSrc}}" style="width: 67px; height: 67px;margin: 0 5px;">
+                <div ng-click="upimageFn()" id="grclBtn" class="imgUp" style="display: inline-block;width: 67px; height: 67px; background: url('img/picture@3x.png') no-repeat;background-size:67px 67px;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="page-bd-15">
+        <button ng-click="confirmFn()" ng-disabled="conFlag" class="weui_btn weui_btn_primary" style="margin-top:80px;">确认提前结清</button>
+    </div>
+
+</div>

@@ -1,0 +1,304 @@
+<!--<div class="wrapper" ng-if="profile.comment">-->
+    <!--<div class="row">-->
+        <!--<div class="col-xs-12 col-sm-10">-->
+            <!--<div class="panel panel-danger">-->
+                <!--<div class="panel-heading">-->
+                    <!--驳回理由-->
+                <!--</div>-->
+                <!--<table class="table table-striped m-b-none">-->
+                    <!--<tbody>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">驳回理由：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.comment }}</td>-->
+                        <!--<td class="v-middle text-right w-sm"></td>-->
+                        <!--<td class="v-middle w-xl"></td>-->
+                    <!--</tr>-->
+                    <!--</tbody>-->
+                <!--</table>-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
+<!--</div>-->
+
+<div class="wrapper" ng-if="profile.gpscode">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    GPS编号
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">GPS编号：</td>
+                        <td class="v-middle w-xl">{{ profile.gpscode }}</td>
+                        <td class="v-middle text-right w-sm"></td>
+                        <td class="v-middle w-xl"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    个人信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">客户姓名：</td>
+                        <td class="v-middle w-xl">{{ profile.realName }}</td>
+                        <td class="v-middle text-right w-sm">联系方式：</td>
+                        <td class="v-middle w-xl">{{ profile.applyMobile }}</td>
+                    </tr>
+                    <!--<tr>-->
+                    <!--<td class="v-middle text-right w-sm">性别：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.sex=="1"?"男":(profile.sex=="1"?"女":"") }}</td>-->
+                    <!--<td class="v-middle text-right w-sm">婚姻状况：</td>-->
+                    <!--&lt;!&ndash;<td class="v-middle w-xl">{{  profile.maritalStatus=="UNMARRIED"?"未婚":(profile.maritalStatus=="MARRIED"?"已婚":(profile.maritalStatus=="WIDOWED"?"丧偶":(profile.maritalStatus=="DIVORCE"?"离异"：""))) }}</td>&ndash;&gt;-->
+                    <!--<td class="v-middle w-xl">{{-->
+                    <!--profile.maritalStatus=="UNMARRIED"?"未婚":(profile.maritalStatus=="MARRIED"?"已婚":(profile.maritalStatus=="WIDOWED"?"丧偶":(profile.maritalStatus=="DIVORCE"?"离异":"")))-->
+                    <!--}}-->
+                    <!--</td>-->
+                    <!--</tr>-->
+                    <tr>
+                        <td class="v-middle text-right w-sm">身份证号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyIdentityNo }}</td>
+                        <td class="v-middle text-right w-sm">服务城市：</td>
+                        <td class="v-middle w-xl">{{ profile.applyEnterpriseProvince }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">储蓄卡支行：</td>
+                        <td class="v-middle w-xl">{{ profile.applyBankCardBranch }}</td>
+                        <td class="v-middle text-right w-sm">储蓄卡卡号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyBankCard }}</td>
+                        <!--<td class="v-middle text-right w-sm">电子邮箱：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.email }}</td>-->
+                    </tr>
+                    <!--<tr>-->
+                    <!--<td class="v-middle text-right w-sm">身份证号：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.applyIdentityNo }}</td>-->
+                    <!--<td class="v-middle text-right w-sm">个人地址：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.personalAddress }}</td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                    <!--<td class="v-middle text-right w-sm">单位名称：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.companyName }}</td>-->
+                    <!--<td class="v-middle text-right w-sm">单位电话：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.companyTelephone }}</td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                    <!--<td class="v-middle text-right w-sm">单位地址：</td>-->
+                    <!--<td class="v-middle" colspan="3">{{ profile.companyAddress }}</td>-->
+                    <!--</tr>-->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="col-xs-12 col-sm-2">
+            <!--<ul class="list-group">-->
+            <!--<li class="list-group-item" ng-repeat="item in stateActList"></li>-->
+            <!--</ul>-->
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    贷款信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">借款总额：</td>
+                        <td class="v-middle w-xl" >{{ profile.applyAmount }}</td>
+                        <td class="v-middle text-right w-sm">借款单号：</td>
+                        <td class="v-middle w-xl">{{ profile.loan.loanSn?profile.loan.loanSn:'客户未借款' }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    车辆信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">车牌号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyPlateNumber }}</td>
+                        <td class="v-middle text-right w-sm">车辆型号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyVehicleModel }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">上牌区域：</td>
+                        <td class="v-middle w-xl">{{profile.vehicleProvince}} {{profile.vehicleCity}}</td>
+                        <td class="v-middle text-right w-sm">车辆年份：</td>
+                        <td class="v-middle w-xl">{{profile.vehicleDate }}</td>
+                        <!--<td class="v-middle text-right w-sm">销售产品：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.product.label }}</td>-->
+                        <!--<td class="v-middle text-right w-sm">年检到期日：</td>-->
+                        <!--<td class="v-middle">{{ profile.applyAnnualSurveyMaturity?(profile.applyAnnualSurveyMaturity |-->
+                        <!--datetime):"没有填时间" }}-->
+                        <!--</td>-->
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">公里数：</td>
+                        <td class="v-middle w-xl">{{ profile.vehicleKm }} 万公里</td>
+                        <td class="v-middle text-right w-sm"></td>
+                        <td class="v-middle w-xl">{{  }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    销售产品
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">产品名称：</td>
+                        <td class="v-middle w-xl"  >{{ profile.product.label }}</td>
+                        <td class="v-middle text-right w-sm">还款方式：</td>
+                        <td class="v-middle w-xl">{{ allEntitiesInfo.product.repaymentMethodCode.values[profile.repaymentMethodCode].label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">给客户的年利率：</td>
+                        <td class="v-middle w-xl">{{ profile.product.debtorInterest?(profile.product.debtorInterest*100 + '%'):''}}</td>
+                        <td class="v-middle text-right w-sm">给门店的年利率：</td>
+                        <td class="v-middle w-xl">{{ profile.product.storeInterest?(profile.product.storeInterest*100 +'%'):""}}</td>
+                        <!--<td class="v-middle text-right w-sm">最小借款：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.product.storeAmountMin }}</td>-->
+                        <!--<td class="v-middle text-right w-sm">最大借款：</td>-->
+                        <!--<td class="v-middle" >{{ profile.product.storeAmountMax }}</td>-->
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">分期数：</td>
+                        <td class="v-middle" colspan="3">{{ profile.product.periodNumber }}</td>
+                    </tr>
+
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    门店收费项目
+                </div>
+                <table class="table table-striped m-b-none">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>收费项目名称</th>
+                        <th>分期</th>
+                        <th>分期数</th>
+                        <th>收费方式</th>
+                        <th>数值</th>
+                        <th>是否退回</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="fee in feetypeStore" >
+                        <td class="v-middle">
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.label }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isPeriod == "true" ? "分期":"不分期" }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.periodNumber | nullToNumber}}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRepayment == "false" ? "固定收费(元)"  : "按比例收费" }}
+                        </td>
+                        <td class="v-middle" >
+                            {{ fee.feeVal | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRefund == "true" ? "可退":"不可退" }}
+                        </td>
+                        <td class="v-middle w-xl">
+                            {{ fee.comment }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    平台收费项目
+                </div>
+                <table class="table table-striped m-b-none">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>收费项目名称</th>
+                        <th>分期</th>
+                        <th>分期数</th>
+                        <th>收费方式</th>
+                        <th>数值</th>
+                        <th>是否退回</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="fee in feetypes">
+                        <td class="v-middle">
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.label }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isPeriod == "true" ? "分期":"不分期" }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.periodNumber | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRepayment == "false" ? "固定收费(元)"  : "按比例收费" }}
+                        </td>
+                        <td class="v-middle" >
+                            {{ fee.feeVal | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRefund == "true" ? "可退":"不可退" }}
+                        </td>
+                        <td class="v-middle w-xl">
+                            {{ fee.comment }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+

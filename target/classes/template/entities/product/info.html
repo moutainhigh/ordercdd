@@ -1,0 +1,175 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="productExcute[act.actCode]()"
+            tooltip="{{act.help}}"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+</div>
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    销售产品基础信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <span translate="product.label.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.label }}</td>
+                        <td class="v-middle text-right">
+                            <!--还款方式 -->
+                            <span translate="product.repaymentMethodCode.self.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{
+                            allEntitiesInfo.product.repaymentMethodCode.values[profile.repaymentMethodCode].label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <!--服务门店-->
+                            <span translate="product.department.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.department.label }}</td>
+                        <td class="v-middle text-right">
+                            <span translate="product.capitalproduct.label"></span>：
+                        </td>
+                        <td class="v-middle">{{ profile.capitalproduct.label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <span translate="product.storeInterest.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.storeInterest }}</td>
+                        <td class="v-middle text-right">
+                            <span translate="product.debtorInterest.label"></span>：
+                        </td>
+                        <td class="v-middle">{{ profile.debtorInterest }}</td>
+                    </tr>
+
+                    <tr>
+                        <td class="v-middle text-right">
+                            <span translate="product.storeAmountMin.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.storeAmountMin }}元</td>
+                        <td class="v-middle text-right">
+                            <span translate="product.storeAmountMax.label"></span>：
+                        </td>
+                        <td class="v-middle">{{ profile.storeAmountMax }}元</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <span translate="product.repaymentAccount.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.repaymentAccount.description }}</td>
+                        <td class="v-middle text-right">
+                            <span>分期数</span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.periodNumber }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <!--逾期宽限天数-->
+                            <span translate="product.overdueGraceDays.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.overdueGraceDays }}天</td>
+                        <td class="v-middle text-right">
+                            <!--授权专用罚息规则-->
+                            <span translate="product.punishinterestrule.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.punishinterestrule.label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <!--贷款分期时间单位-->
+                            <span translate="capitalproduct.periodCode.self.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{
+                            allEntitiesInfo.capitalproduct.periodCode.values[profile.periodCode].label }}
+                        </td>
+                        <td class="v-middle text-right">
+                            <span translate="product.description.label"></span>：
+                        </td>
+                        <td class="v-middle b-r" colspan="3">{{ profile.description==null?'无':profile.description }}</td>
+                    </tr>
+
+                    <!--新增银行卡信息-->
+                    <tr>
+                        <td class="v-middle text-right">
+                            <!--账户号码-->
+                            <span translate="bankcard.accountIdentity.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.repaymentAccount.accountIdentity }}</td>
+
+                        <td class="v-middle text-right">
+                            <!--支行-->
+                            <span translate="bankcard.branchName.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.repaymentAccount.branchName}}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right">
+                            <!--持卡人-->
+                            <span translate="bankcard.realName.label"></span>：
+                        </td>
+                        <td class="v-middle b-r">{{ profile.repaymentAccount.realName}}</td>
+
+                        <td class="v-middle text-right"></td>
+                        <td class="v-middle b-r"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    收费项目
+                </div>
+                <table class="table table-striped m-b-none">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>收费项目名称</th>
+                        <th>分期</th>
+                        <th>收费方式</th>
+                        <th>数值</th>
+                        <th>是否退回</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="fee in feetypes">
+                        <td class="v-middle">
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.label }}
+                        </td>
+                        <td class="v-middle">
+                            {{ forms[fee.feetypeCode].isPeriod == "true" ? "分期":"不分期"}}
+                        </td>
+                        <td class="v-middle">
+                            {{ forms[fee.feetypeCode].isRepayment == "false" ? "固定收费(元)"  : "按比例收费" }}
+                        </td>
+                        <td class="v-middle">
+                            {{ forms[fee.feetypeCode].feeVal | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ forms[fee.feetypeCode].isRefund == "true" ? "可退":"不可退" }}
+                        </td>
+                        <td class="v-middle">
+                            {{ forms[fee.feetypeCode].comment }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+        <!--<div class="m-t">记录...</div>-->
+        <!--</div>-->
+    </div>
+</div>

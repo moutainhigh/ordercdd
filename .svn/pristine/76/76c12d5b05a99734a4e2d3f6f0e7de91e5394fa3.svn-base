@@ -1,0 +1,380 @@
+<script>
+    "use strict";
+    app.controller("vehicleFormController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.allStates   = null;
+                $scope.state       = null;
+                $scope.workflow_id = $stateParams.workflow_id;
+
+                //区域JSON
+                $scope.regions = angular.copy(window.regions);
+
+                //默认为第一个
+                $scope.province = $scope.regions.children[0];
+                $scope.cities = $scope.province.children;
+                $scope.city = $scope.province.children[0];
+
+                //获取所有企业状态
+                entity.getList("rest/vehicleStates").then(function (statesResResult) {
+
+                    $scope.allStates = statesResResult._embeddedItems;
+
+                    //判断是否新建
+                    if ($stateParams.id) {
+
+                        $scope.id = $stateParams.id;
+
+                        //更新时获取实体信息
+                        entity.getDetail("rest/vehicles/" + $stateParams.id, ["state", "workflow"]).then(function (vehicleResResult) {
+                            $scope.form  = vehicleResResult;
+                            //获取当前状态
+                            $scope.state = entity.getSelectedMyOwn($scope.allStates, $scope.form.state);
+
+                            $scope.province  = entity.getSelectedRegion($scope.regions, $scope.form.vehicleProvince);
+                            $scope.cities    = $scope.province.children;
+                            $scope.city      = entity.getSelectedRegion($scope.province, $scope.form.vehicleCity);
+
+                        });
+
+                    }
+
+                });
+
+                /*
+                 * 保存更新函数
+                 * @author  金杭
+                 * @param   无
+                 * @return  无
+                 * */
+                $scope.saveVehicle = function () {
+
+                    //先把状态变成资源
+                    $scope.form.state       = $scope.state ? $scope.state._links.self.href : null;
+                    $scope.form.workflow    = "/rest/vehicleWorkflows/" + $stateParams.workflow_id;
+
+                    //判断是新建还是更新
+                    if ($scope.form._links) {
+
+                        //加入行为code
+                        $scope.form.act = "update";
+
+                        $http({
+                            method: "PATCH",
+                            url: $scope.form._links.self.href,
+                            data: $scope.form
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {
+                                entity_key: "vehicle",
+                                workflow_id: $stateParams.workflow_id
+                            }, {reload: true});
+                            $rootScope.toasterSuccess("修改成功！", "车辆信息修改成功！");
+                        });
+
+                    }
+
+                };
+
+                $scope.surveyDateToday = function () {
+                    $scope.form.applyAnnualSurveyMaturity = new Date();
+                };
+
+                $scope.surveyDateClear = function () {
+                    $scope.form.applyAnnualSurveyMaturity = null;
+                };
+
+                $scope.policyDateToday = function () {
+                    $scope.form.applyAnnualPolicyMaturity = new Date();
+                };
+
+                $scope.policyDateClear = function () {
+                    $scope.form.applyAnnualPolicyMaturity = null;
+                };
+
+                $scope.vehicleDateToday = function () {
+                    $scope.form.vehicleDate = new Date();
+                };
+
+                $scope.vehicleDateClear = function () {
+                    $scope.form.vehicleDate = null;
+                };
+
+                $scope.vehicleDatepicker = {
+                    surveyOpened: false,
+                    policyOpened: false,
+                    vehicleOpened: false
+                };
+
+                $scope.openSurvey = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.vehicleDatepicker = {
+                        surveyOpened: true,
+                        policyOpened: false,
+                        vehicleOpened: false
+                    };
+                };
+
+                $scope.openPolicy = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.vehicleDatepicker = {
+                        surveyOpened: false,
+                        policyOpened: true,
+                        vehicleOpened: false
+                    };
+                };
+
+                $scope.openVehicle = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.vehicleDatepicker = {
+                        surveyOpened: false,
+                        policyOpened: false,
+                        vehicleOpened: true
+                    };
+                };
+
+                $scope.dateOptions = {
+                    formatYear: "yy",
+                    startingDay: 1,
+                    class: "datepicker",
+                    showWeeks: false
+                };
+
+            }
+        ]
+    )
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs" ng-controller="vehicleFormController">
+    <!-- column -->
+    <div class="col">
+        <div class="vbox">
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <form name="vehicle_form" class="form-horizontal">
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span> <span
+                                            translate="vehicle.plateNumber.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <input type="text"
+                                               class="form-control"
+                                               id="vehicle_plateNumber"
+                                               name="vehicle_plateNumber"
+                                               ng-model="form.plateNumber"
+                                               required
+                                               pattern="^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-HJ-NP-Z]{1}[A-HJ-NP-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$">
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.vehicle_plateNumber.$invalid">
+                                              <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的车牌号,字母为大写字母
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span> <span
+                                            translate="vehicle.vehicleModel.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <input type="text"
+                                               class="form-control"
+                                               ng-model="form.vehicleModel"
+                                               id="vehicle_vehicleModel"
+                                               name="vehicle_vehicleModel"
+                                               required
+                                               pattern="(?!^\d+$)(?!^[a-zA-Z]+$)[0-9a-zA-Z]{0,100}">
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.vehicle_vehicleModel.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;车辆型号为数字和字母的组合，此项必填
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span>
+                                        <span translate="vehicle.vehicleKm.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   id="vehicle_vehicleKm"
+                                                   name="vehicle_vehicleKm"
+                                                   ng-model="form.vehicleKm"
+                                                   ng-maxlength="10"
+                                                   pattern="^[0-9]+([.]{1}[0-9]+){0,1}$"
+                                                   required>
+                                            <span class="input-group-addon">万公里</span>
+                                        </div>
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.vehicle_vehicleKm.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;必须填数字且不超过10位数字
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span>
+                                        <span translate="vehicle.registerRegionName.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <two-region-select></two-region-select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span>
+                                        <span translate="vehicle.annualSurveyMaturity.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   name="vehicle_surveyDate"
+                                                   disabled
+                                                   datepicker-popup="yyyy-MM-dd"
+                                                   ng-model="form.annualSurveyMaturity"
+                                                   is-open="vehicleDatepicker.surveyOpened"
+                                                   datepicker-options="dateOptions"
+                                                   required
+                                                   current-text="今天"
+                                                   clear-text="清除"
+                                                   close-text="关闭"/>
+                                            <span class="input-group-btn">
+                                                <button type="button" class="btn btn-default"
+                                                        ng-click="openSurvey($event)">
+                                                    <i class="fa fa-calendar"></i>
+                                                </button>
+                                            </span>
+                                        </div>
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.vehicle_surveyDate.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;保单到期日必填
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span>
+                                        <span translate="vehicle.annualPolicyMaturity.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   name="vehicle_policyDate"
+                                                   disabled
+                                                   datepicker-popup="yyyy-MM-dd"
+                                                   ng-model="form.annualPolicyMaturity"
+                                                   is-open="vehicleDatepicker.policyOpened"
+                                                   datepicker-options="dateOptions"
+                                                   required
+                                                   current-text="今天"
+                                                   clear-text="清除"
+                                                   close-text="关闭"/>
+                                            <span class="input-group-btn">
+                                                <button type="button" class="btn btn-default"
+                                                        ng-click="openPolicy($event)">
+                                                    <i class="fa fa-calendar"></i>
+                                                </button>
+                                            </span>
+                                        </div>
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.vehicle_policyDate.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;保单到期日必填
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span>
+                                        <span translate="vehicle.vehicleDate.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   name="vehicle_vehicleDate"
+                                                   disabled
+                                                   datepicker-popup="yyyy-MM"
+                                                   ng-model="form.vehicleDate"
+                                                   is-open="vehicleDatepicker.vehicleOpened"
+                                                   datepicker-options="dateOptions"
+                                                   required
+                                                   current-text="今天"
+                                                   clear-text="清除"
+                                                   close-text="关闭"/>
+                                            <span class="input-group-btn">
+                                                <button type="button" class="btn btn-default"
+                                                        ng-click="openVehicle($event)">
+                                                    <i class="fa fa-calendar"></i>
+                                                </button>
+                                            </span>
+                                        </div>
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.vehicle_vehicleDate.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;车辆年份必填
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">
+                                        <span class="text-danger">*</span>
+                                        <span translate="vehicle.state.label"></span>
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <select class="form-control"
+                                                name="state"
+                                                ng-model="state"
+                                                ng-options="state.label for state in allStates"
+                                                required></select>
+                                        <span class="help-block text-danger"
+                                              ng-show="vehicle_form.state.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;状态为必填
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-sm-4 col-sm-offset-2">
+                                        <!--<button ng-if="form._links"-->
+                                                <!--ui-sref="workflowEntity.home.profile.info({id:id,entity_key:'enterprise'})"-->
+                                                <!--class="btn btn-default">-->
+                                            <!--返回-->
+                                        <!--</button>-->
+                                        <button ui-sref="workflowEntity.list({entity_key:'vehicle',workflow_id:workflow_id})"
+                                                class="btn btn-default">
+                                            返回
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-primary"
+                                                ng-disabled="vehicle_form.$invalid"
+                                                ng-click="saveVehicle()">
+                                            保存
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

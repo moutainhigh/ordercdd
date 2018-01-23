@@ -1,0 +1,230 @@
+package com.liyang.service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.liyang.domain.base.AbstractAuditorAct.ActGroup;
+import com.liyang.domain.base.ActRepository;
+import com.liyang.domain.base.AuditorEntityRepository;
+import com.liyang.domain.base.LogRepository;
+import com.liyang.domain.capitalpayment.Capitalpayment;
+import com.liyang.domain.capitalpayment.CapitalpaymentAct;
+import com.liyang.domain.capitalpayment.CapitalpaymentActRepository;
+import com.liyang.domain.capitalpayment.CapitalpaymentFile;
+import com.liyang.domain.capitalpayment.CapitalpaymentLog;
+import com.liyang.domain.capitalpayment.CapitalpaymentLogRepository;
+import com.liyang.domain.capitalpayment.CapitalpaymentRepository;
+import com.liyang.domain.capitalpayment.CapitalpaymentState;
+import com.liyang.domain.capitalpayment.CapitalpaymentStateRepository;
+import com.liyang.domain.capitalpayment.CapitalpaymentWorkflow;
+import com.liyang.domain.capitalplan.Capitalplan;
+import com.liyang.domain.capitalplan.CapitalplanRepository;
+import com.liyang.domain.capitalplan.CapitalplanStateRepository;
+import com.liyang.domain.capitalplan.CapitalplanWorkflowRepository;
+import com.liyang.domain.capitalproduct.Capitalproduct;
+import com.liyang.domain.capitalproduct.Capitalproduct.RepaymentMethodCode;
+import com.liyang.domain.creditrepayplan.Creditrepayplan;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.loan.Loan.PeriodCode;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject;
+import com.liyang.util.ReturnObject.Level;
+
+@Service
+public class CapitalpaymentService extends AbstractWorkflowService<Capitalpayment, CapitalpaymentWorkflow, CapitalpaymentAct, CapitalpaymentState, CapitalpaymentLog, CapitalpaymentFile> {
+    @Autowired
+    CapitalpaymentLogRepository capitalpaymentLogRepository;
+    @Autowired
+    CapitalpaymentRepository capitalpaymentRepository;
+    @Autowired
+    CapitalpaymentActRepository capitalpaymentActRepository;
+    @Autowired
+    CapitalpaymentStateRepository capitalpaymentStateRepository;
+    @Autowired
+    private CapitalplanRepository capitalplanRepository;
+    @Autowired
+    private CapitalplanStateRepository capitalplanStateRepository;
+    @Autowired
+    private CapitalplanWorkflowRepository capitalplanWorkflowRepository;
+
+    @Override
+    @PostConstruct
+    public void sqlInit() {
+        long count =  capitalpaymentActRepository.count();
+        if (count==0) {
+
+
+        	CapitalpaymentAct save1 = capitalpaymentActRepository.save(new CapitalpaymentAct("创建", "create", 10, ActGroup.UPDATE));
+        	CapitalpaymentAct save2 = capitalpaymentActRepository.save(new CapitalpaymentAct("读取", "read", 20, ActGroup.READ));
+        	CapitalpaymentAct save3 = capitalpaymentActRepository.save(new CapitalpaymentAct("更新", "update", 30, ActGroup.UPDATE));
+        	CapitalpaymentAct save4 = capitalpaymentActRepository.save(new CapitalpaymentAct("删除", "delete", 40, ActGroup.UPDATE));
+        	CapitalpaymentAct save5 = capitalpaymentActRepository.save(new CapitalpaymentAct("自己的列表", "listOwn", 50, ActGroup.READ));
+        	CapitalpaymentAct save6 = capitalpaymentActRepository.save(new CapitalpaymentAct("部门的列表", "listOwnDepartment", 60, ActGroup.READ));
+        	CapitalpaymentAct save7 = capitalpaymentActRepository.save(new CapitalpaymentAct("部门和下属部门的列表", "listOwnDepartmentAndChildren", 70, ActGroup.READ));
+
+            CapitalpaymentState newState = new CapitalpaymentState("已创建", 0, "CREATED");
+            newState = capitalpaymentStateRepository.save(newState);
+            CapitalpaymentState enableState = new CapitalpaymentState("已放款", 100, "ENABLED");
+            enableState.setActs(Arrays.asList(save1, save2, save3, save4, save5, save6, save7).stream().collect(Collectors.toSet()));
+            capitalpaymentStateRepository.save(enableState);
+            capitalpaymentStateRepository.save(new CapitalpaymentState("无效", 200, "DISABLED"));
+            capitalpaymentStateRepository.save(new CapitalpaymentState("删除", 300, "DELETED"));
+           CapitalpaymentState notLend = new CapitalpaymentState("未放款",101,"NOTLEND");
+           notLend.setActs(Arrays.asList(save1,save2,save3,save4,save5,save6,save7).stream().collect(Collectors.toSet()));
+
+        }
+    }
+
+    @Override
+    public LogRepository<CapitalpaymentLog> getLogRepository() {
+        return capitalpaymentLogRepository;
+    }
+
+    @Override
+    public AuditorEntityRepository<Capitalpayment> getAuditorEntityRepository() {
+
+        return capitalpaymentRepository;
+    }
+
+
+    @Override
+    @PostConstruct
+    public void injectLogRepository() {
+        new Capitalpayment().setLogRepository(capitalpaymentLogRepository);
+
+    }
+
+    @Override
+    public CapitalpaymentLog getLogInstance() {
+        return new CapitalpaymentLog();
+    }
+
+    @Override
+    public ActRepository<CapitalpaymentAct> getActRepository() {
+        return capitalpaymentActRepository;
+    }
+
+    @Override
+    @PostConstruct
+    public void injectEntityService() {
+        new Capitalpayment().setService(this);
+
+    }
+
+    @Override
+    public CapitalpaymentFile getFileLogInstance() {
+        return new CapitalpaymentFile();
+    }
+    
+    /**下载文件
+     * @param capitalpayment
+     */
+    public void doDownloadfile(Capitalpayment capitalpayment) {
+        downloadAllFilesAnduploadToAliyun(capitalpayment);
+    }
+
+    /**资方放款，生成还款计划
+     * @param capitalpayment
+     */
+    public void doPayment(Capitalpayment capitalpayment) {
+    	BigDecimal applyAmount = capitalpayment.getApplyAmount();
+    	if (applyAmount == null || new BigDecimal(0).compareTo(applyAmount) >= 0) {
+			throw new FailReturnObject(1, "实际放款金额不能为0", Level.ERROR);
+		}
+    	//生成还款计划
+    	Capitalproduct capitalproduct = capitalpayment.getCapitalproduct();
+    	Integer periodNumber = capitalproduct.getPeriodNumber();
+    	if (periodNumber==null) {
+			throw new FailReturnObject(1, "分期数为null", Level.ERROR);
+		}
+    	PeriodCode periodCode = capitalproduct.getPeriodCode();
+    	if (!Loan.PeriodCode.MONTH.equals(periodCode)) {
+    		throw new FailReturnObject(2, "暂不支持当前分期单位", Level.ERROR);
+		}
+    	RepaymentMethodCode methodCode = capitalproduct.getRepaymentMethodCode();
+    	if (!RepaymentMethodCode.BEFORE_INTEREST_AFTER_PRINCIPAL.equals(methodCode)) {
+    		throw new FailReturnObject(3, "暂不支持当前还款方式", Level.ERROR);
+		}
+    	
+    	Calendar calendar=Calendar.getInstance();
+		Calendar calendar1=Calendar.getInstance();
+		BigDecimal principal=new BigDecimal(0);
+    	List<Capitalplan> list = new ArrayList<>();
+    	for (int i = 0; i < periodNumber.intValue(); i++) {
+    		Capitalplan plan=new Capitalplan();
+
+			if(periodNumber-i==1){
+				principal = capitalpayment.getApplyAmount();//最后一期
+			}
+			plan.setPrincipal(principal);//本金
+
+			calendar.add(Calendar.MONTH,1);
+			Date repaymentDate=calendar.getTime();
+			plan.setRepaymentDate(repaymentDate);//还款日期
+
+			calendar1.setTime(repaymentDate);
+			calendar1.add(Calendar.DAY_OF_MONTH,
+					capitalproduct.getOverdueGraceDays()==null? 0 : capitalproduct.getOverdueGraceDays());
+			plan.setExtentedRepaymentDate(calendar1.getTime());
+			
+			//利息,注意精确度取舍导致的计算错误
+			BigDecimal interest = capitalpayment.getApplyAmount()
+					.multiply(capitalproduct.getCreditorInterest())
+					.divide(BigDecimal.valueOf(12),2, BigDecimal.ROUND_UP);
+			plan.setInterest(interest);
+
+			plan.setFees(plan.getPrincipal().add(plan.getInterest()));//总和
+
+			plan.setPlanSn(createPlanSn(capitalpayment.getOrdercddloan().getOrdercddloanSn(), periodNumber, i+1));
+			plan.setCapitalproduct(capitalproduct);
+			plan.setCapitalpayment(capitalpayment);
+			plan.setOrdercddloan(capitalpayment.getOrdercddloan());
+			String planState="ACCOUNT";//但出账
+			if(i == 0){//第一期是已出账
+				planState="ACCOUNTED";
+			}
+			plan.setState(capitalplanStateRepository.findByStateCode(planState));//待出账
+			plan.setWorkflow(capitalplanWorkflowRepository.findOne(1));
+			list.add(plan);
+		}
+    	capitalplanRepository.save(list);
+		capitalpayment.setPaymentTime(new Date());
+		capitalpaymentRepository.save(capitalpayment);
+	}
+    
+    /**创建计划单号
+	 * @param loanSn 借款单号
+	 * @param periodNumber 总期数
+	 * @param i 当前期数
+	 * @return
+	 */
+	private String createPlanSn(String ordercddLoanSn,int periodNumber,int i) {
+		if (ordercddLoanSn==null) {
+			ordercddLoanSn ="";
+		}
+		String all = String.valueOf(periodNumber);
+		int length = all.length();//几位数
+		if (length<2) {//默认保持两位的长度
+			length = 2;
+		}
+		while (all.length() < length) {//高位用0补齐
+			all = "0" + all;
+		}
+		String cur = String.valueOf(i);
+		while (cur.length() < length) {
+			cur = "0" + cur;
+		}
+		return ordercddLoanSn + all + cur;
+	}
+}

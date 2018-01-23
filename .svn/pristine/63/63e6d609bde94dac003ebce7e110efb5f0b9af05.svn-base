@@ -1,0 +1,152 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="baddebtExcute[act.actCode](profile)"
+            tooltip="{{act.help}}"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+
+    <div class="modal fade" id="{{ profile.id }}_finish">
+        <div class="modal-xs modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>×</span>
+                    </button>
+                    <h4 class="modal-title">坏账结清</h4>
+                </div>
+                <div class="modal-body">
+                    <form name="step1" class="form-horizontal form-validation">
+                        <div class="form-group clearfix">
+                            <label class="col-lg-4 control-label text-right margin-top">剩余还款金额</label>
+                            <div class="col-lg-6">
+                                <label style="font-size: 24px;">
+                                    {{ profile.debtorLeftAmount ? profile.debtorLeftAmount : "0"}} 元
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <label class="col-lg-4 control-label text-right margin-top">车辆拍卖金额</label>
+                            <div class="col-lg-6">
+                                <div class="input-group">
+                                    <input type="text"
+                                           name="vehicle_actual_amount"
+                                           class="form-control"
+                                           ng-model="vehiclePrice"
+                                           required
+                                           pattern="^\d+(?:.\d{1,2})?$">
+                                    <span class="input-group-addon">元</span>
+                                </div>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.vehicle_actual_amount.$invalid">
+                                          <i class="fa fa-exclamation-circle text-danger"></i>&ensp;车辆拍卖金额为数字(最多两位小数)，且必填
+                                    </span>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <label class="col-lg-4 control-label text-right margin-top">还给门店的金额</label>
+                            <div class="col-lg-6">
+                                <div class="input-group">
+                                    <input type="text"
+                                           name="store_amount"
+                                           class="form-control"
+                                           ng-model="storeAmount"
+                                           required
+                                           pattern="^\d+(?:.\d{1,2})?$">
+                                    <span class="input-group-addon">元</span>
+                                </div>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.store_amount.$invalid">
+                                          <i class="fa fa-exclamation-circle text-danger"></i>&ensp;还给门店的金额为数字(最多两位小数)，且必填
+                                    </span>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <label class="col-lg-4 control-label text-right margin-top">贷后处理费用</label>
+                            <div class="col-lg-6">
+                                <div class="input-group">
+                                    <input type="text"
+                                           name="vehicle_expense"
+                                           class="form-control"
+                                           ng-model="vehicleExpense"
+                                           required
+                                           pattern="^\d+(?:.\d{1,2})?$">
+                                    <span class="input-group-addon">元</span>
+                                </div>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.vehicle_expense.$invalid">
+                                          <i class="fa fa-exclamation-circle text-danger"></i>&ensp;贷后处理费用为数字(最多两位小数)，且必填
+                                    </span>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg" ng-disabled="step1.$invalid"
+                            ng-click="baddebtExcute.finishSave(vehiclePrice,storeAmount,vehicleExpense,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-8 col-xs-offset-2">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    基础信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">所属贷款：</td>
+                        <td class="v-middle w-xl">{{ profile.loan.loanSn }}</td>
+                        <td class="v-middle text-right w-sm">客户名称：</td>
+                        <td class="v-middle w-xl">{{ profile.debtorName }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">联系号码：</td>
+                        <td class="v-middle w-xl">{{ profile.debtorMobile }}</td>
+                        <td class="v-middle text-right w-sm">所属门店：</td>
+                        <td class="v-middle w-xl">{{ profile.department.label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">门店垫付的利息：</td>
+                        <td class="v-middle w-xl">{{ profile.storeAdvanceInterest | nullToString}}</td>
+                        <td class="v-middle text-right w-sm">门店垫付的本金：</td>
+                        <td class="v-middle w-xl">{{ profile.storeAdvancePrincipal | nullToMoney}}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">实际收到的卖车的钱：</td>
+                        <td class="v-middle w-xl">{{ profile.vehicleActualAmount | nullToMoney}}</td>
+                        <td class="v-middle text-right w-sm">门店分到的钱：</td>
+                        <td class="v-middle w-xl">{{ profile.storeAmount | nullToMoney}}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">备注：</td>
+                        <td class="v-middle" colspan="3">{{ profile.comment}}</td>
+                    </tr>
+                    <!--<tr>-->
+                    <!--<td class="v-middle text-right w-sm">资金产品：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.capitalproduct.label }}</td>-->
+                    <!--<td class="v-middle text-right w-sm">状态：</td>-->
+                    <!--<td class="v-middle w-xl">{{ profile.state.label }}</td>-->
+                    <!--</tr>-->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+        <!--<ul class="list-group">-->
+        <!--<li class="list-group-item" ng-repeat="item in stateActList"></li>-->
+        <!--</ul>-->
+        <!--</div>-->
+    </div>
+</div>

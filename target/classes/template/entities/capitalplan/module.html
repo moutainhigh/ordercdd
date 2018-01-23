@@ -1,0 +1,225 @@
+<script>
+    "use strict";
+    app.controller("capitalplanListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.profile = {};
+                $scope.canActs = [];
+                $scope.canFileActs = [];
+
+                $scope.profile_id = null;
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "取消",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "capitalplan"}, {reload: true});
+                        });
+                    });
+                };
+
+                /*
+               * 上传文件表头
+               * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipName = "";
+
+                /*大方法的对象*/
+                $scope.capitalplanExcute = {
+                    /*放款*/
+                    "finish": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否放款", "/rest/capitalplans/" + profile.id, {
+                            act: "finish",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /* 上传凭证*/
+                    "uploadMaterials": function (profile) {
+                        $scope.profile_id  = profile.id;
+                        $scope.actCode           = "uploadMaterials";
+                        $scope.headerInformation = "上传凭证";
+                        $scope.promptInformation = "只能上传一张图片";
+                        $scope.uploader.clearQueue();
+                        $("#" + profile.id + "_upload").modal("show");
+                    },
+//                    /*同意确定*/
+                    "confirmInformation": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否同意", "/rest/capitalplans/" + profile.id, {
+                            act: "confirmInformation",
+                            loanType: "ORDERCDD"
+                        });
+                    }
+
+                };
+
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 1;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    fileItem.actCode = $scope.actCode;
+
+                    fileItem.formData = [{fileType: "file"}];
+
+                    $("#audit_zip_file_input").val("");
+
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+//
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    //删除图片
+
+                    $http({
+                        method: "GET",
+
+                        url: "/rest/capitalplans/"+$scope.profile_id+"/files"
+                    }).success(function (resResult) {
+                        console.log(resResult,'ooo')
+                        $scope.filesLength = resResult._embedded.capitalplanFiles;
+                        $scope.pictureId = null;
+
+                        if ($scope.filesLength.length >0){
+                            $scope.pictureId = resResult._embedded.capitalplanFiles[0].id;
+                            $http({
+                                method: "DELETE",
+
+                                url: "/rest/capitalplans/"+$scope.pictureId+"/log"
+                            }).success(function (resResult) {
+                                $http({
+                                    method: "DELETE",
+                                    url: "/rest/capitalplans/"+$scope.pictureId
+                                }).success(function (resResult) {
+//                                        console.log(resResult)
+//                                    $("#capitalplan_upload_one_photo").modal("hide");
+//
+                                    if (fileItem.actCode === "uploadMaterials") {
+                                        $scope.zipName = response.result.newFileName;
+                                        $http({
+                                            method: "PATCH",
+                                            url: "/rest/capitalplans/" + $scope.profile_id,//这里是关联的实体
+                                            data: {
+                                                fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                                act: fileItem.actCode//上传文件的行为
+                                            }
+                                        }).success(function (data) {
+
+                                            $("#" + $scope.profile_id + "_upload").modal("hide");
+
+                                            $http({
+                                                method: "PATCH",
+                                                url: "/rest/capitalplans/" + $scope.profile_id,//这里是关联的实体
+                                                data: {
+                                                    act: "finish",
+                                                    loanType: "ORDERCDD"
+                                                }
+                                            }).success(function (date) {
+                                                $state.reload(true);
+                                                $rootScope.toasterSuccess("成功", "放款成功");
+                                            })
+
+                                        });
+                                    }
+
+                                });
+                            });
+
+                        }
+                        else
+                            {
+                            if (fileItem.actCode === "uploadMaterials") {
+                                $scope.zipName = response.result.newFileName;
+                                $http({
+                                    method: "PATCH",
+                                    url: "/rest/capitalplans/" + $scope.profile_id,//这里是关联的实体
+                                    data: {
+                                        fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                        act: fileItem.actCode//上传文件的行为
+                                    }
+                                }).success(function (data) {
+
+                                    $("#" + $scope.profile_id + "_upload").modal("hide");
+
+                                    $http({
+                                        method: "PATCH",
+                                        url: "/rest/capitalplans/" + $scope.profile_id,//这里是关联的实体
+                                        data: {
+                                            act: "finish",
+                                            loanType: "ORDERCDD"
+                                        }
+                                    }).success(function (date) {
+                                        $state.reload(true);
+                                        $rootScope.toasterSuccess("成功", "放款成功");
+                                    })
+                                });
+                            }
+                        }
+
+
+                    });
+                };
+
+                /* 查看凭证
+                * */
+
+                $scope.uploadOnePhoto = function (id) {
+
+                    $scope.pictureId = id;
+//                    $scope.modalMaxPhoto = null;
+                    $http({
+                        method: "GET",
+                        url: "/rest/capitalplans/"+id+"/files"
+                    }).success(function (res) {
+                        $scope.modalMaxPhoto = res._embedded.capitalplanFiles[0];
+//                        console.log(res._embedded.loansFiles[0],'345')
+                        $("#capitalplan_upload_one_photo").modal("show");
+                    });
+                };
+
+            }
+        ]
+    );
+</script>
+
+<div ng-controller="capitalplanListModuleController" class="h-full" ui-view></div>

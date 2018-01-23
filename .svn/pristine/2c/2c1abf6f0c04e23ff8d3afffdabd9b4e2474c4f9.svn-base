@@ -1,0 +1,181 @@
+<script>
+    "use strict";
+    app.controller("loanexceptionListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                $scope.profile_id = null;
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "取消",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "loan"}, {reload: true});
+                        });
+                    });
+                };
+
+                /*
+               * 上传文件表头
+               * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipName = "";
+
+                /*大方法的对象*/
+                $scope.loanexceptionExcute = {
+                    /*转正常*/
+                    "exceptionover": function (profile) {
+
+                        console.log(profile)
+                        $("#" + profile.id + "_normal").modal("show");
+                    },
+
+                    /*转正常理由加改变状态*/
+                    "handleRemark": function (handleRemark, profile) {
+                        if (handleRemark) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/loanexceptions/" + profile.id,
+                                data: {
+                                    act: "exceptionover",
+                                    handleRemark: handleRemark,
+//                                    notice: profile.serviceUser.id
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_normal").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "loanexception"}, {reload: true});
+                                $rootScope.toasterInfo("成功！", "已改为正常处理！");
+                            });
+
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的正常处理理由！");
+                        }
+                    },
+                    /*催收转坏账*/
+                    "baddebt": function (profile) {
+                        console.log(profile)
+                        $http({
+                            method: "GET",
+                            url: "loan/count?loanId=" + profile.loanId
+                        }).success(function (resResult) {
+                            console.log(resResult)
+
+                            $scope.baddebtVal = resResult;
+                            $("#" + profile.id + "_baddebt").modal("show");
+                        });
+
+                    },
+                    /*确定*/
+                    "baddebtSave": function (storeAdvancePrincipal, capitalRealAmount, handleRemark, profile) {
+                        console.log(profile)
+                        swal({
+                            title: "是否确定转坏账",
+                            type: "success",
+                            showCancelButton: true,
+                            cancelButtonText: "退出",
+                            confirmButtonText: "同意",
+                            closeOnConfirm: true
+                        }, function () {
+                            $("#" + profile.id + "_baddebt").modal("hide");
+                            $http({
+                                method: "GET",
+                                url: "loan/count?loanId=" + profile.loanId
+                            }).success(function (resResult1) {
+                                $http({
+                                    method: "POST",
+                                    url: "rest/baddebts",
+                                    data: {
+                                        storeAdvancePrincipal: storeAdvancePrincipal,
+                                        act: "baddebt",
+                                        capitalRealAmount: capitalRealAmount,
+                                        comment: handleRemark,
+                                        debtorLeftAmount: resResult1.debtorLeftAmount,
+                                        debtorRepayAmount: resResult1.debtorRepayAmount,
+                                        storeAdvanceInterest: resResult1.storeAdvanceInterest,
+                                        loan: "rest/loans/" + profile.loanId
+                                    }
+                                }).success(function (resResult) {
+                                    $rootScope.toasterSuccess("成功", "已经成功转为坏账！");
+                                    $http({
+                                        method: "PATCH",
+                                        url: "/rest/loanexceptions/" + profile.id,
+                                        data: {
+                                            act: "baddebt"
+                                        }
+                                    }).success(function (resResult) {
+                                    });
+
+                                    $state.go("workflowEntity.list", {entity_key: "loanexception"}, {reload: true});
+                                });
+                            });
+
+                        });
+
+                    }
+
+
+
+                    /*转坏账*/
+//                    "baddebt": function (profile) {
+//
+//                        console.log(profile)
+//                        $("#" + profile.id + "_badDebt").modal("show");
+//                    },
+
+                    /*转坏账由加改变状态*/
+//                    "storeAdvancePrincipal": function (handleRemark,storeAdvancePrincipal, profile) {
+//                        if (handleRemark) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/loanexceptions/" + profile.id,
+//                                data: {
+//                                    act: "baddebt",
+//                                    handleRemark: handleRemark,
+//                                    storeAdvancePrincipal: storeAdvancePrincipal
+//                                }
+//                            }).success(function (resResult) {
+//                                $("#" + profile.id + "_badDebt").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "loanexception"}, {reload: true});
+//                                $rootScope.toasterInfo("成功！", "已改为坏账处理！");
+//                            });
+//
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请填写详细的坏账处理理由！");
+//                        }
+//                    }
+                };
+
+            }
+        ]
+    );
+</script>
+
+
+<div ng-controller="loanexceptionListModuleController" class="h-full" ui-view></div>

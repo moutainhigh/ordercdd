@@ -1,0 +1,164 @@
+<script>
+    app.controller("loanHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity,FileUploader) {
+
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile = {};
+                $scope.canActs = [];
+                $scope.canFileActs = [];
+
+                entity.getDetail("/rest/storeBonuses/" + $scope.id, ["createdBy","state", "workflow","ordercdd"]).then(function (resResult) {
+                        console.log(resResult,'a');
+                    $scope.profile = resResult;
+
+                    $scope.canActs     = [];
+                    $scope.canFileActs = [];
+
+                    angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                        if (val.actGroup === "UPDATE" || val.actGroup === "OPERATE" || val.actGroup === "FILE_PACKAGE") {
+                            $scope.canActs.push(val);
+                        } else if (val.actGroup === "FILE_OPERATE") {
+                            $scope.canFileActs.push(val)
+                        }
+                    });
+
+                    $scope.state_code = $scope.profile.state.stateCode;
+
+                });
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "退出",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "storeBonus"}, {reload: true});
+                        });
+                    });
+                };
+
+                /*
+                * 上传文件表头
+                * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+
+
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipName = "";
+
+                /*大方法的对象*/
+                $scope.loanExcute = {
+                    /*放款*/
+                    "loan": function () {
+                        $scope.patchAct("success", "这条贷款是否放款", "/rest/storeBonuses/" + $scope.id, {act: "loan",loanType:"ORDERCDD"});
+                    },
+
+                   /* 上传凭证*/
+                    "uploadMaterials": function () {
+                        $scope.actCode           = "uploadMaterials";
+                        $scope.headerInformation = "上传凭证";
+                        $scope.promptInformation = "只能一张图片";
+                        $scope.uploader.clearQueue();
+                        $("#" + $scope.profile.id + "_upload").modal("show");
+//                        $scope.patchAct("success","这条客户信息是否能通过","/rest/" + $scope.entity_key + "s/" + $scope.id,{act:"adopt"});
+                    }
+
+                };
+
+
+
+                $scope.uploadDone = false;
+//
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 1;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    fileItem.actCode = $scope.actCode;
+//                    if (fileItem.file.type !== "application/x-zip-compressed") {
+//
+//                        $rootScope.toasterError("警告！", "审核文件的格式需要为ZIP的压缩文件格式！");
+//
+//                        fileItem.remove();
+//
+//                    } else {
+                    fileItem.formData = [{fileType: "file"}];
+//                    }
+
+                    $("#audit_zip_file_input").val("");
+
+                };
+
+
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+//
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+                    if (fileItem.actCode === "uploadMaterials") {
+                        $scope.zipName = response.result.newFileName;
+                        $http({
+                            method: "PATCH",
+                            url: "/rest/storeBonuses/" + $scope.id,//这里是关联的实体
+                            data: {
+                                fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                act: fileItem.actCode//上传文件的行为
+                            }
+                        }).success(function (data) {
+                            $("#" + $scope.profile.id + "_upload").modal("hide");
+                            $rootScope.toasterSuccess("成功", "打包好的文件上传成功");
+                        });
+
+
+                    }
+
+                }
+
+
+        }]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loanHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

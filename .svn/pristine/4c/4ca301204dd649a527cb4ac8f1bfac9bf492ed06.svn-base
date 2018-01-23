@@ -1,0 +1,308 @@
+package com.liyang.service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
+
+import com.liyang.domain.base.AbstractAuditorAct.ActGroup;
+import com.liyang.domain.base.ActRepository;
+import com.liyang.domain.base.AuditorEntityRepository;
+import com.liyang.domain.base.LogRepository;
+import com.liyang.domain.creditcard.Creditcard;
+import com.liyang.domain.creditrepayplan.Creditrepayplan;
+import com.liyang.domain.creditrepayplan.CreditrepayplanAct;
+import com.liyang.domain.creditrepayplan.CreditrepayplanActRepository;
+import com.liyang.domain.creditrepayplan.CreditrepayplanFile;
+import com.liyang.domain.creditrepayplan.CreditrepayplanLog;
+import com.liyang.domain.creditrepayplan.CreditrepayplanLogRepository;
+import com.liyang.domain.creditrepayplan.CreditrepayplanRepository;
+import com.liyang.domain.creditrepayplan.CreditrepayplanState;
+import com.liyang.domain.creditrepayplan.CreditrepayplanStateRepository;
+import com.liyang.domain.creditrepayplan.CreditrepayplanWorkflow;
+import com.liyang.domain.creditrepayplan.CreditrepayplanWorkflowRepository;
+import com.liyang.domain.feebackup.Feebackup;
+import com.liyang.domain.feebackup.Feebackup.BACKUPSOURCE;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.loan.LoanUtil;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.role.RoleRepository;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject;
+
+@Service
+@Order(313)
+public class CreditrepayplanService extends AbstractWorkflowService<Creditrepayplan, CreditrepayplanWorkflow,CreditrepayplanAct, CreditrepayplanState, CreditrepayplanLog, CreditrepayplanFile>{
+	@Autowired
+	CreditrepayplanActRepository creditrepayplanActRepository;
+	
+	@Autowired
+	CreditrepayplanStateRepository creditrepayplanStateRepository;
+	
+	@Autowired
+	CreditrepayplanLogRepository  creditrepayplanLogRepository;
+	
+	@Autowired
+	CreditrepayplanRepository  creditrepayplanRepository;
+	//
+	@Autowired
+	CreditrepayplanWorkflowRepository creditrepayplanWorkflowRepository;
+	@Autowired
+	RoleRepository roleRepository;
+	@Autowired
+	WlqzWechatPubService wechatPubService;
+
+	@Override
+	@PostConstruct 
+	public void sqlInit() {
+		long count  = creditrepayplanActRepository.count();
+		if(count==0){
+			CreditrepayplanAct save1 = creditrepayplanActRepository.save(new CreditrepayplanAct("创建","create",10,ActGroup.UPDATE));
+			CreditrepayplanAct save2 = creditrepayplanActRepository.save(new CreditrepayplanAct("读取","read",20,ActGroup.READ));
+			CreditrepayplanAct save3 = creditrepayplanActRepository.save(new CreditrepayplanAct("更新","update",30,ActGroup.UPDATE));
+			CreditrepayplanAct save4 = creditrepayplanActRepository.save(new CreditrepayplanAct("删除","delete",40,ActGroup.UPDATE));
+			CreditrepayplanAct save5 = creditrepayplanActRepository.save(new CreditrepayplanAct("自己的列表","listOwn",50,ActGroup.READ));
+			CreditrepayplanAct save6 = creditrepayplanActRepository.save(new CreditrepayplanAct("部门的列表","listOwnDepartment",60,ActGroup.READ));
+			CreditrepayplanAct save7 = creditrepayplanActRepository.save(new CreditrepayplanAct("部门和下属部门的列表","listOwnDepartmentAndChildren",70,ActGroup.READ));
+			CreditrepayplanAct save8 = creditrepayplanActRepository.save(new CreditrepayplanAct("通知其他人","noticeOther",80,ActGroup.NOTICE));
+			CreditrepayplanAct save9 = creditrepayplanActRepository.save(new CreditrepayplanAct("通知操作者","noticeActUser",90,ActGroup.NOTICE));
+			CreditrepayplanAct save10 = creditrepayplanActRepository.save(new CreditrepayplanAct("通知展示人","noticeShowUser",100,ActGroup.NOTICE));
+	
+			CreditrepayplanState newState =new CreditrepayplanState("已创建",0,"CREATED");
+			newState = creditrepayplanStateRepository.save(newState);
+			
+			CreditrepayplanState enableState = new CreditrepayplanState("有效",100,"ENABLED");
+			enableState.setActs(Arrays.asList(save1,save2,save3,save4,save5,save6,save7).stream().collect(Collectors.toSet()));
+			creditrepayplanStateRepository.save(enableState);
+			creditrepayplanStateRepository.save(new CreditrepayplanState("无效",200,"DISABLED"));
+			creditrepayplanStateRepository.save(new CreditrepayplanState("已删除",300,"DELETED"));
+
+			creditrepayplanStateRepository.save(new CreditrepayplanState("待出账",30,"ACCOUNT"));
+			creditrepayplanStateRepository.save(new CreditrepayplanState("已出账",20,"ACCOUNTED"));
+			creditrepayplanStateRepository.save(new CreditrepayplanState("已结清",10,"CLOSED"));
+		}
+	}
+
+	@Override
+	public LogRepository<CreditrepayplanLog> getLogRepository() {
+		return creditrepayplanLogRepository;
+	}
+
+	@Override
+	public AuditorEntityRepository<Creditrepayplan> getAuditorEntityRepository() {
+		return creditrepayplanRepository;
+	}
+
+
+	@Override
+	@PostConstruct 
+	public void injectLogRepository() {
+		new Creditrepayplan().setLogRepository(creditrepayplanLogRepository);
+		
+	}
+
+	@Override
+	public CreditrepayplanLog getLogInstance() {
+		return new CreditrepayplanLog();
+	}
+
+	@Override
+	public ActRepository<CreditrepayplanAct> getActRepository() {
+		return creditrepayplanActRepository;
+	}
+
+	@Override
+	@PostConstruct 
+	public void injectEntityService() {
+		new Creditrepayplan().setService(this);
+		
+	}
+
+	@Override
+	public CreditrepayplanFile getFileLogInstance() {
+		return new CreditrepayplanFile();
+	}
+	
+	public void save(Creditrepayplan Creditrepayplan){
+		//wechatPubService.pushOpenAccMessage(toUser, url, templateId, childMap);
+		creditrepayplanRepository.save(Creditrepayplan);
+	}
+	public List<Creditrepayplan> insertPlayPlanByOrdercdd(Loan loan)
+	{
+		List<Creditrepayplan> list=new ArrayList<>();
+		int periodNumber = loan.getPeriodNumber();//期数
+		Ordercdd ordercdd=loan.getOrdercdd();
+		Creditcard creditcard=loan.getCreditcard();
+		//分期收费，每一期的金额
+		List<BigDecimal[]> periodAmountList = periodFeebackup(ordercdd.getFeebackups(), loan);
+
+		Loan.PeriodCode periodCode = loan.getPeriodCode();
+		Calendar calendar=Calendar.getInstance();
+		Calendar calendar1=Calendar.getInstance();
+
+		LoanUtil util = new LoanUtil();
+		List<Creditrepayplan> savePlanList = new ArrayList<>();
+		BigDecimal principal = new BigDecimal(0);
+		BigDecimal fees = new BigDecimal(0);
+		for (int i = 0; i < periodNumber; i++){
+			Creditrepayplan creditrepayplan=new Creditrepayplan();
+			creditrepayplan.setLoanSn(loan.getLoanSn());//
+			creditrepayplan.setOrderSn(ordercdd.getCddSn());
+			creditrepayplan.setPlanSn(createPlanSn(loan.getLoanSn(), periodNumber, i+1));
+			creditrepayplan.setCreditcard(creditcard);
+			creditrepayplan.setLoan(loan);
+
+			if(periodNumber - i == 1){
+				principal=loan.getPrincipal();//最后一期
+			}
+			creditrepayplan.setPrincipal(principal);//本金
+			//罚息关联在loan
+
+			switch (periodCode){
+				case MONTH:
+					calendar.add(Calendar.MONTH,1);
+					break;
+				default:
+					throw new FailReturnObject(1534,"分期应该是月份", ReturnObject.Level.ERROR);
+			}
+			Date debtorRepaymentDate=calendar.getTime();
+			creditrepayplan.setDebtorRepaymentDate(debtorRepaymentDate);//还款日期,因为在执行放款操作才执行本段代码，项目经理说就是当前日期+一个月
+
+			//利息,注意精确度取舍导致的计算错误
+			BigDecimal interest = util.getDebtorInterest(loan.getPrincipal(), loan.getDebtorInterest());
+			creditrepayplan.setInterest(interest);
+			
+			BigDecimal periodAccount = curPeriodFeebackup(periodAmountList, i);//每一期的分期费用
+			
+			fees = creditrepayplan.getPrincipal().add(creditrepayplan.getInterest()).add(periodAccount);//本金+利息+费用分期
+			if (ordercdd.getIsInterestAdvance() && (periodNumber - i == 1)) {//如果是预先扣除了最后一期的利息
+				creditrepayplan.setInterest(new BigDecimal(0));
+				fees = creditrepayplan.getPrincipal().add(periodAccount);//本金+费用分期
+			}
+			creditrepayplan.setFees(fees);//总和
+
+			String planState="ACCOUNT";//但出账
+			if(i==0){//第一期是已出账
+				planState="ACCOUNTED";
+			}
+			creditrepayplan.setState(creditrepayplanStateRepository.findByStateCode(planState));//待出账
+
+			creditrepayplan.setServiceUser(loan.getServiceUser());
+
+			creditrepayplan.setLeftAmount(creditrepayplan.getFees());//等于总和
+			creditrepayplan.setDebtorMobile(ordercdd.getApplyMobile());
+			creditrepayplan.setDebtorName(ordercdd.getRealName());
+
+			calendar1.setTime(debtorRepaymentDate);
+			calendar1.add(Calendar.DAY_OF_MONTH,loan.getDebtorExtentedRepaymentDays()==null?0: loan.getDebtorExtentedRepaymentDays());
+			creditrepayplan.setDebtorExtentedRepaymentDate(calendar1.getTime());
+
+			creditrepayplan.setWorkflow(creditrepayplanWorkflowRepository.findOne(1));
+			creditrepayplan.setIsOverdue(false);
+			savePlanList.add(creditrepayplan);
+		}
+		creditrepayplanRepository.save(savePlanList);
+		return list;
+	}
+	
+	/**创建计划单号
+	 * @param loanSn 借款单号
+	 * @param periodNumber 总期数
+	 * @param i 当前期数
+	 * @return
+	 */
+	private String createPlanSn(String loanSn,int periodNumber,int i) {
+		if (loanSn==null) {
+			loanSn ="";
+		}
+		String all = String.valueOf(periodNumber);
+		int length = all.length();//几位数
+		if (length<2) {//默认保持两位的长度
+			length = 2;
+		}
+		while (all.length() < length) {//高位用0补齐
+			all = "0" + all;
+		}
+		String cur = String.valueOf(i);
+		while (cur.length() < length) {
+			cur = "0" + cur;
+		}
+		return loanSn + all + cur;
+	}
+	
+	/** 获取分期收费
+	 * @param feebackups
+	 * @param loan
+	 * @return
+	 */
+	private List<BigDecimal[]> periodFeebackup(Set<Feebackup> feebackups,Loan loan) {
+		List<BigDecimal[]> result = new ArrayList<>();
+		if (feebackups==null) {
+			return result;
+		}
+    	for (Feebackup feebackup : feebackups) {
+    		if (feebackup==null) {
+    			continue;
+    		}
+    		if (BACKUPSOURCE.COMPANYFEE.equals(feebackup.getBackupsource())) {
+				continue;//如果属于平台向门店收费，跳过
+			}
+    		if (!feebackup.getIsPeriod()) {//不是分期收费
+				continue;
+			}
+    		BigDecimal temp=new BigDecimal(0);//不管是按比例还是固定收费，实际的收费金额
+    		BigDecimal feeRate = feebackup.getFeeRate();
+    		Integer periodNumber = feebackup.getPeriodNumber();
+    		if (periodNumber == null || 0 > periodNumber) {//无效的分期
+				continue;
+			}
+    		if (periodNumber > loan.getPeriodNumber()) {
+    			continue;
+			}
+    		if (feeRate==null||
+    				(feeRate.compareTo(new BigDecimal("0"))<=0)) {//排除零或负值
+    			temp = feebackup.getFeeAmount();//固定收费
+    		}else {
+    			temp = feeRate.multiply(loan.getPrincipal());//按比例收费
+			}
+    		//最大的分期数是贷款分期数
+    		BigDecimal[] periodAmountAry = new BigDecimal[loan.getPeriodNumber()];
+    		BigDecimal periodAmount = temp.divide(new BigDecimal(periodNumber),2, BigDecimal.ROUND_UP);//一笔分期费用的钱
+    		for (int i = 0; i < periodNumber; i++) {
+				periodAmountAry[i] = periodAmount;
+			}
+    		result.add(periodAmountAry);
+		}
+    	return result;
+	}
+	
+	/**当前分期计划的分期费用
+	 * @param periodAmountList
+	 * @param i
+	 * @return
+	 */
+	public BigDecimal curPeriodFeebackup(List<BigDecimal[]> periodAmountList, int i) {
+		BigDecimal amount = new BigDecimal(0);
+		if (periodAmountList == null || periodAmountList.isEmpty()) {
+			return amount;
+		}
+		for (BigDecimal[] array : periodAmountList) {
+			BigDecimal cur = array[i];
+			if (cur == null) {
+				continue;
+			}
+			amount = amount.add(cur);
+		}
+		return amount;
+	}
+}

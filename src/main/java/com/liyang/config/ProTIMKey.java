@@ -1,0 +1,48 @@
+//package com.liyang.config;
+//
+//import org.springframework.context.annotation.Profile;
+//import org.springframework.stereotype.Component;
+//
+//@Component(value = "TIMKEY")
+//@Profile("cdd")
+//public class ProTIMKey implements TIMKey {
+//    private final static String privStr = "-----BEGIN PRIVATE KEY-----\n" +
+//            "MIGEAgEAMBAGByqGSM49AgEGBSuBBAAKBG0wawIBAQQglvYM0OYobWLE9WC5EICo\n" +
+//            "6kCDZGc92lVMAJbfQjUFkwyhRANCAAS7208F0vtO2JtG9VMg9uQURfOEBgDH5Oe0\n" +
+//            "xq1V/w/0xePaN4H0g1qe34DX7qlXLu/Cmsv1WXeZQOUZfgMrE8hU\n" +
+//            "-----END PRIVATE KEY-----\n";
+//
+//
+//    private final static String pubStr = "-----BEGIN PUBLIC KEY-----\n" +
+//            "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAEu9tPBdL7TtibRvVTIPbkFEXzhAYAx+Tn\n" +
+//            "tMatVf8P9MXj2jeB9INant+A1+6pVy7vwprL9Vl3mUDlGX4DKxPIVA==\n" +
+//            "-----END PUBLIC KEY-----\n";
+//
+//    private final static long sdkAppId = 1400034003L;
+//    private final static String identifier = "admin";
+//    private final static String usersig = "eJxlj01rg0AQhu-*CvFcyvqxCRZ6MDYpittWa1rIZdlmVzOE6EZ3o1Ly35vYQIXOYS7P8-LOfBumaVp58n7PtttaV4qqQQrLfDAtZN39QSmBU6ao2-B-UPQSGkFZoUQzQhtj7CA0dYCLSkEBN4PxA1QT3PI9HTt*894l7F6WO1WgHCFZrsMoDWXU*WinX4non0-8zR*I-rDzzVKXctUlUsekCHab8iUjQVSmx8FNw9k8rvd*70HXfxVqsV4NePEUOjJPskzHR9YGn9J7nFQqOIjbQ7Yz97E9mx50Ek0LdTUKDroqLrqOZZyNH4yIXgA_";
+//    @Override
+//    public String getPriStr() {
+//        return privStr;
+//    }
+//
+//    @Override
+//    public String getPubStr() {
+//        return pubStr;
+//    }
+//
+//    @Override
+//    public long getSdkAppId() {
+//        return sdkAppId;
+//    }
+//
+//    @Override
+//    public String getIdentifier() {
+//        return identifier;
+//    }
+//
+//    @Override
+//    public String getUserSig() {
+//        return usersig;
+//    }
+//}

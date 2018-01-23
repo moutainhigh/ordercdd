@@ -1,0 +1,330 @@
+<script>
+    "use strict";
+    app.controller("creditrepaymentListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                /**/
+                $scope.paymentMaterials = null;
+
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "退出",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+
+                            $state.go("workflowEntity.list", {entity_key: "creditrepayment"}, {reload: true});
+
+                        });
+                    });
+                };
+
+
+                /*大方法的对象*/
+                $scope.creditrepaymentExcute = {
+                    //获取备注
+                    "remark": function (profile) {
+                        $("#" + profile.id + "_note").modal("show");
+                        $('#'+ profile.id +'_label').val('');
+                        $http({
+                            method: "get",
+                            url: "/creditrepayment/label?id=" + profile.id
+                        }).success(function (resResult) {
+                            $scope.label = resResult;
+
+                            // $rootScope.toasterSuccess("成功！", "添加备注成功");
+                            // $("#" + profile.id + "_note").modal("hide");
+                            // $state.go("workflowEntity.list", {entity_key: "creditrepayment"}, {reload: true});
+                        })
+                    },
+
+                    /*添加备注*/
+
+                    "addRemark": function (profile) {
+                        var textLabel = $('#'+ profile.id +'_label').val();
+
+                        if(textLabel == ''){
+                            $rootScope.toasterError("失败！", "请添加备注");
+                            return false
+                        }
+
+                        $http({
+                            method: "PATCH",
+                            url: "/rest/creditrepayments/" + profile.id,
+                            data: {
+                                act: "remark",
+                                label: textLabel
+                            }
+                        }).success(function (resResult) {
+                            $rootScope.toasterSuccess("成功！", "添加备注成功");
+                            textLabel = '';
+                            $("#" + profile.id + "_note").modal("hide");
+                            $state.go("workflowEntity.list", {entity_key: "creditrepayment"}, {reload: true});
+                        })
+                    },
+
+                    /*确认到账*/
+                    "confirm": function (profile) {
+
+                        $("#" + profile.id + "_creditrepayment_confirm_modal").modal("show");
+                        $("#" + profile.id + "_realAmount").val('');
+
+                    },
+                    "confirmSave":function (profile) {
+
+                        var cusFlag = true;
+                        var finFlag = true;
+
+                        var realAmount = $("#" + profile.id + "_realAmount").val();
+
+                        if( realAmount =='' || !/^(\d+(\.\d{1,2})?)$/.test(realAmount)){
+                            $('#' + profile.id + '_realAmount_i').show();
+                            $rootScope.toasterError("失败！", "请输入实际到账金额");
+                            return false
+                        }
+                        if( profile.file_length == 0 ){
+                            $rootScope.toasterError("失败！", "请上传凭证");
+                            return false
+                        }
+
+                        $http({
+                            method: "GET",
+                            url: "/rest/creditrepayments/"+profile.id+"/files"
+                        }).success(function (res) {
+                            res._embedded.creditrepaymentFiles.sort(function(a,b){
+                                return b.id - a.id
+                            })
+
+                            var len = res._embedded.creditrepaymentFiles.length;
+
+                            angular.forEach(res._embedded.creditrepaymentFiles,function(val,index){
+                                if(cusFlag){
+                                    if( val.subcategory != "财务凭证"){
+                                        $scope.customerImg = val;
+                                        cusFlag = false;
+                                    }
+                                }
+
+                                if(finFlag){
+                                    if( val.subcategory == "财务凭证"){
+                                        $scope.financeImg = val;
+                                        finFlag = false;
+                                    }
+                                }
+                                if( cusFlag == false && finFlag == false && index == len-1){
+
+                                    cusFlag = null;
+                                    finFlag = null;
+
+                                    if( profile.repaymentType == 2){
+                                        //提前还清
+
+                                        $http({
+                                            method: "PATCH",
+                                            url: "/rest/creditrepayments/" + profile.id,
+                                            data: {
+                                                act: "once",
+                                                realAmount: realAmount,
+                                                repaymentType:profile.repaymentType
+                                                //loan: "rest/loans/" + profile.loan_id
+                                            }
+                                        }).success(function (resResult) {
+                                            $rootScope.toasterSuccess("成功！", "确认提前还清成功");
+                                            $("#" + profile.id + "_creditrepayment_confirm_modal").modal("hide");
+                                            $state.go("workflowEntity.list", {entity_key: "creditrepayment"}, {reload: true});
+                                        });
+                                    }else{
+                                        $http({
+                                            method: "PATCH",
+                                            url: "/rest/creditrepayments/" + profile.id,
+                                            data: {
+                                                act: "confirm",
+                                                realAmount: realAmount,
+                                                repaymentType:profile.repaymentType
+                                            }
+                                        }).success(function (resResult) {
+                                            $rootScope.toasterSuccess("成功！", "确认到账成功");
+                                            $("#" + profile.id + "_creditrepayment_confirm_modal").modal("hide");
+                                            $state.go("workflowEntity.list", {entity_key: "creditrepayment"}, {reload: true});
+                                        });
+                                    }
+                                }else if( index == len-1 ){
+                                    if(cusFlag == true || finFlag == true){
+                                        $rootScope.toasterError("失败！", "请上传凭证");
+                                    }
+                                }
+
+                            })
+                            //$("#capitalpayment_upload_one_photo").modal("show");
+                        });
+
+                    },
+                    /*资料确定*/
+                    "confirmInformation": function (profile) {
+                        $scope.patchAct("success", "这条客户信息是否能通过", "/rest/loans/" + profile.id, {
+                            act: "confirmInformation",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /* 上传凭证*/
+                    "uploadMaterials": function (profile) {
+                        $scope.profile_id  = profile.id;
+                        $scope.actCode           = "uploadMaterials";
+                        $scope.headerInformation = "上传凭证";
+                        $scope.promptInformation = "只能上传一张图片";
+                        $scope.uploader.clearQueue();
+                        $("#" + profile.id + "_upload").modal("show");
+                    }
+                };
+
+
+                /*上传文件*/
+                //以下是上传文件的动作详情参考前端框架示例 js/controllers/file-upload.js
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 10;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    console.log(fileItem);
+                    fileItem.actCode = $scope.actCode;
+//                    if (fileItem.file.type !== "application/x-zip-compressed") {
+//
+//                        $rootScope.toasterError("警告！", "审核文件的格式需要为ZIP的压缩文件格式！");
+//
+//                        fileItem.remove();
+//
+//                    } else {
+                    fileItem.formData = [{fileType: "file"}];
+//                    }
+
+//                    $("#audit_zip_file_input").val("");
+
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+
+
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+
+                    //增加目录结构
+                    response.result.topcategory = "财务凭证";
+                    response.result.subcategory = "财务凭证";
+
+                    $scope.urlName = response.result.newFileName;
+
+                    $http({
+                        method: "PATCH",
+                        url: "/rest/creditrepayments/" + $scope.profile_id,//这里是关联的实体
+                        data: {
+                            fileObject: response.result,//fileObject是上传完文件后的文件对象
+                            act: "uploadMaterials"//上传文件的行为
+                        }
+                    }).success(function (data) {
+                        $("#" + $scope.ordercddId + "_upload").modal("hide");
+                        $('.modal-backdrop').hide();
+                        $rootScope.toasterSuccess("成功", "凭证上传成功");
+                        $state.go("workflowEntity.list", {entity_key: "creditrepayment"}, {reload: true});
+                    });
+
+                };
+
+                /*
+                * 查看凭证
+                * */
+
+                $scope.pictureId = null;
+
+                $scope.uploadOnePhoto = function (id) {
+                    console.log(id,'123');
+                    $scope.pictureId = id;
+                    $scope.modalMaxPhoto = null;
+                    $scope.customerImg = null;
+                    $scope.financeImg = null;
+
+                    var cusFlag = true;
+                    var finFlag = true;
+
+                    $http({
+                        method: "GET",
+                        url: "/rest/creditrepayments/"+id+"/files"
+                    }).success(function (res) {
+                        res._embedded.creditrepaymentFiles.sort(function(a,b){
+                            return b.id - a.id
+                        })
+
+                        angular.forEach(res._embedded.creditrepaymentFiles,function(val,index){
+                            if(cusFlag){
+                                if( val.subcategory != "财务凭证"){
+                                    $scope.customerImg = val;
+                                    cusFlag = false;
+                                }
+                            }
+                        })
+
+                        angular.forEach(res._embedded.creditrepaymentFiles,function(val,index){
+                            if(finFlag){
+                                if( val.subcategory == "财务凭证"){
+                                    $scope.financeImg = val;
+                                    finFlag = false;
+                                }
+                            }
+                        })
+                        $("#capitalpayment_upload_one_photo").modal("show");
+                    });
+
+
+//                    console.log($scope.pictureId);
+//                    $scope.modalMaxPhoto = value;
+
+                };
+
+
+            }
+        ]
+    );
+</script>
+
+
+<div ng-controller="creditrepaymentListModuleController" class="h-full" ui-view></div>

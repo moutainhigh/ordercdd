@@ -1,0 +1,69 @@
+package com.liyang.domain.loan;
+
+import java.math.BigDecimal;
+import java.util.Set;
+
+import com.liyang.domain.feebackup.Feebackup;
+import com.liyang.domain.feebackup.Feebackup.BACKUPSOURCE;
+
+/**
+ * 放一些金额计算，有多个地方用到的公用方法，保持计算金额一致
+ * 如果一个地方逻辑改变，必然会影响到其他地方
+ */
+public class LoanUtil {
+	
+	/** 计算收费项目,让生成合同的金额和实际生成贷款loan的金额一致
+     * @return
+     */
+    public Loan calculateFeebackup(BigDecimal principal,Set<Feebackup> feebackups, BigDecimal interest) {
+    	Loan loan = new Loan();
+    	if (feebackups==null || principal == null) {
+			return loan;
+		}
+    	BigDecimal oneTimeFee=new BigDecimal(0);
+    	BigDecimal retreatFee=new BigDecimal(0);
+    	for (Feebackup feebackup : feebackups) {
+    		if (feebackup==null) {
+    			continue;
+    		}
+    		if (BACKUPSOURCE.COMPANYFEE.equals(feebackup.getBackupsource())) {
+				continue;//如果属于平台向门店收费，跳过
+			}
+    		BigDecimal temp=new BigDecimal(0);
+    		BigDecimal feeRate = feebackup.getFeeRate();
+    		if (feeRate==null||
+    				(feeRate.compareTo(new BigDecimal("0"))<=0)) {//排除零或负值
+    			temp = feebackup.getFeeAmount();//固定收费
+    		}else {
+    			temp = feeRate.multiply(principal);//按比例收费
+			}
+    		if (!feebackup.getIsPeriod()) {//一次性收费，不分期
+    			oneTimeFee = oneTimeFee.add(temp);
+    		}
+    		if (feebackup.getIsRefund()) {//可退
+				retreatFee = retreatFee.add(temp);
+			}
+		}
+    	loan.setOneTimeFee(oneTimeFee);
+    	loan.setRetreatFee(retreatFee);
+    	//实际应该放款金额
+		BigDecimal debtorRealityAmount = principal.subtract(loan.getOneTimeFee());
+		if (interest != null) {
+			debtorRealityAmount = debtorRealityAmount.subtract(interest);//减去提前收的利息
+		}
+		loan.setDebtorRealityAmount(debtorRealityAmount);
+    	return loan;
+	}
+    
+    /**先息后本，每月的利息
+     * @param principal
+     * @param debtorInterest
+     * @return
+     */
+    public BigDecimal getDebtorInterest(BigDecimal principal,BigDecimal debtorInterest) {
+		if (principal == null || debtorInterest == null) {
+			return new BigDecimal(0);
+		}
+		return principal.multiply(debtorInterest).divide(BigDecimal.valueOf(12),2, BigDecimal.ROUND_UP);
+	}
+}

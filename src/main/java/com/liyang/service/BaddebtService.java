@@ -1,0 +1,208 @@
+package com.liyang.service;
+
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.liyang.domain.baddebt.Baddebt;
+import com.liyang.domain.baddebt.BaddebtAct;
+import com.liyang.domain.baddebt.BaddebtActRepository;
+import com.liyang.domain.baddebt.BaddebtFile;
+import com.liyang.domain.baddebt.BaddebtLog;
+import com.liyang.domain.baddebt.BaddebtLogRepository;
+import com.liyang.domain.baddebt.BaddebtRepository;
+import com.liyang.domain.baddebt.BaddebtState;
+import com.liyang.domain.baddebt.BaddebtStateRepository;
+import com.liyang.domain.baddebt.BaddebtWorkflow;
+import com.liyang.domain.baddebt.BaddebtWorkflowRepository;
+import com.liyang.domain.base.AbstractAuditorAct.ActGroup;
+import com.liyang.domain.base.ActRepository;
+import com.liyang.domain.base.AuditorEntityRepository;
+import com.liyang.domain.base.LogRepository;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.loan.LoanRepository;
+import com.liyang.domain.loan.Loanoverdue;
+import com.liyang.domain.loan.LoanoverdueRepository;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.storeadvance.Storeadvance.StoreadvanceType;
+import com.liyang.domain.storeadvance.StoreadvanceRepository;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject.Level;
+
+@Service
+public class BaddebtService extends AbstractWorkflowService<Baddebt, BaddebtWorkflow,BaddebtAct, BaddebtState, BaddebtLog, BaddebtFile>{
+	@Autowired
+	BaddebtActRepository baddebtActRepository;
+	@Autowired
+	BaddebtStateRepository baddebtStateRepository;
+	@Autowired
+	BaddebtLogRepository  baddebtLogRepository;
+	@Autowired
+	BaddebtRepository  baddebtRepository;
+	@Autowired
+	BaddebtWorkflowRepository baddebtWorkflowRepository;
+	@Autowired
+	StoreadvanceRepository storeadvanceRepository;
+	@Autowired
+	LoanexceptionService loanexceptionService;
+	@Autowired
+	LoanoverdueRepository loanoverdueRepository;
+	@Autowired
+	StoreadvanceService storeadvanceService;
+	@Autowired
+	StoreBonusService storeBonusService;
+	@Autowired
+	LoanService loanService;
+	@Autowired
+	LoanRepository loanRepository;
+
+	@Override
+	@PostConstruct
+	public void sqlInit() {
+		long count  = baddebtActRepository.count();
+		if(count==0){
+			BaddebtAct save1 = baddebtActRepository.save(new BaddebtAct("创建","create",10,ActGroup.UPDATE));
+			BaddebtAct save2 = baddebtActRepository.save(new BaddebtAct("读取","read",20,ActGroup.READ));
+			BaddebtAct save3 = baddebtActRepository.save(new BaddebtAct("更新","update",30,ActGroup.UPDATE));
+			BaddebtAct save4 = baddebtActRepository.save(new BaddebtAct("删除","delete",40,ActGroup.UPDATE));
+			BaddebtAct save5 = baddebtActRepository.save(new BaddebtAct("自己的列表","listOwn",50,ActGroup.READ));
+			BaddebtAct save6 = baddebtActRepository.save(new BaddebtAct("部门的列表","listOwnDepartment",60,ActGroup.READ));
+			BaddebtAct save7 = baddebtActRepository.save(new BaddebtAct("部门和下属部门的列表","listOwnDepartmentAndChildren",70,ActGroup.READ));
+			BaddebtAct save8 = baddebtActRepository.save(new BaddebtAct("通知其他人","noticeOther",80,ActGroup.NOTICE));
+			BaddebtAct save9 = baddebtActRepository.save(new BaddebtAct("通知操作者","noticeActUser",90,ActGroup.NOTICE));
+			BaddebtAct save10 = baddebtActRepository.save(new BaddebtAct("通知展示人","noticeShowUser",100,ActGroup.NOTICE));
+	
+			BaddebtState newState =new BaddebtState("已创建",0,"CREATED");
+			newState = baddebtStateRepository.save(newState);
+			
+			BaddebtState enableState = new BaddebtState("有效",100,"ENABLED");
+			enableState.setActs(Arrays.asList(save1,save2,save3,save4,save5,save6,save7).stream().collect(Collectors.toSet()));
+			baddebtStateRepository.save(enableState);
+			baddebtStateRepository.save(new BaddebtState("无效",200,"DISABLED"));
+			baddebtStateRepository.save(new BaddebtState("已删除",300,"DELETED"));
+
+			baddebtStateRepository.save(new BaddebtState("待出账",30,"ACCOUNT"));
+			baddebtStateRepository.save(new BaddebtState("已出账",20,"ACCOUNTED"));
+			baddebtStateRepository.save(new BaddebtState("已结清",10,"CLOSED"));
+		}
+	}
+
+	@Override
+	public LogRepository<BaddebtLog> getLogRepository() {
+		return baddebtLogRepository;
+	}
+
+	@Override
+	public AuditorEntityRepository<Baddebt> getAuditorEntityRepository() {
+		return baddebtRepository;
+	}
+
+
+	@Override
+	@PostConstruct 
+	public void injectLogRepository() {
+		new Baddebt().setLogRepository(baddebtLogRepository);
+	}
+
+	@Override
+	public BaddebtLog getLogInstance() {
+		return new BaddebtLog();
+	}
+
+	@Override
+	public ActRepository<BaddebtAct> getActRepository() {
+		return baddebtActRepository;
+	}
+
+	@Override
+	@PostConstruct 
+	public void injectEntityService() {
+		new Baddebt().setService(this);
+		
+	}
+
+	@Override
+	public BaddebtFile getFileLogInstance() {
+		return new BaddebtFile();
+	}
+	
+	public Baddebt doCreate(Baddebt baddebt) {
+		return doBaddebt(baddebt);
+	}
+	
+	/**异常催收，转坏账
+	 * 有逾期转坏账，也有异常转坏账
+	 * 1. 创建一条坏账记录
+	 * 2. 确认坏账之后，逾期计算停止
+	 * 3. 标记之前的门店放款记录作废
+	 * 4. 生成一条门店垫付（本金）记录
+	 * 5. 贷款是否逾期变为未逾期
+	 * @param loan
+	 * @return
+	 */
+	@Transactional
+	public Baddebt doBaddebt(Baddebt baddebt) {
+		Loan loan = baddebt.getLoan();
+		if (loan == null) {
+			throw new FailReturnObject(1, "loan是null", Level.ERROR);
+		}
+		loan.setHandleRemark(baddebt.getComment());
+		loanexceptionService.baddebt(loan);
+		Loanoverdue loanoverdue = loanoverdueRepository.findEnable(loan.getId());
+		if (loanoverdue != null) {//如果逾期记录不为空
+			loanoverdue.setFinishAt(new Date());
+			loanoverdue.setStatus(1);
+			loanoverdueRepository.save(loanoverdue);
+		}
+		Ordercdd ordercdd = loan.getOrdercdd();
+		//创建一条坏账记录
+		baddebt.setLoan(loan);
+		baddebt.setDebtorName(ordercdd.getRealName());
+		baddebt.setDebtorMobile(ordercdd.getApplyMobile());
+		baddebt.setDepartment(ordercdd.getCreatedByDepartment());
+		BaddebtState state = baddebtStateRepository.findByStateCode("ENABLED");
+		baddebt.setState(state);
+		baddebtRepository.save(baddebt);
+		
+		//创建一条门店垫付记录（本金）
+		storeadvanceService.create(loan, baddebt.getStoreAdvancePrincipal(), StoreadvanceType.BADDEBT);
+		
+		//标记之前的门店放款记录作废
+		storeBonusService.disabledState(ordercdd.getId());
+		//贷款是否逾期变为未逾期
+		loan.setOverdue(false);
+		loanRepository.save(loan);
+		//确认坏账之后，逾期计算停止,将所有计划的状态改为DISABLED，逾期记录设置为结束
+		loanService.closePlan(loan);
+		return baddebt;
+	}
+	
+	/**结清
+	 * @param baddebt
+	 * @return
+	 */
+	public Baddebt doFinish(Baddebt baddebt) {
+		baddebt.setFinishAt(new Date());
+		baddebtRepository.save(baddebt);
+		//将所有计划的剩余金额置0
+		loanService.resetPlan(baddebt.getLoan());
+		//根据页面传的值，计算
+		BigDecimal vehiclePrice = baddebt.getVehiclePrice();
+		vehiclePrice = vehiclePrice==null?new BigDecimal(0):vehiclePrice;
+		BigDecimal vehicleExpense = baddebt.getVehicleExpense();
+		vehicleExpense = vehicleExpense==null?new BigDecimal(0):vehicleExpense;
+		BigDecimal storeAmount = baddebt.getStoreAmount();
+		storeAmount = storeAmount==null?new BigDecimal(0):storeAmount;
+		
+		baddebt.setVehicleActualAmount(vehiclePrice.subtract(vehicleExpense));//实际得到的卖车的钱
+		baddebt.setCompanyAmount(baddebt.getVehicleActualAmount().subtract(storeAmount));
+		return baddebt;
+	}
+}

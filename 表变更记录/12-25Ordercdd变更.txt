@@ -1,0 +1,65 @@
+Ordercdd表 
+
+
+	/*******************************车辆信息Start*********************************/提取到vehicle
+//	@Column(name = "apply_register_reigionname")
+	@Transient
+	@JsonIgnore
+	@Info(label="上牌区域",placeholder="",tip="",help="",secret="")
+	private String applyRegisterReigionName;
+
+//	@Column(name = "apply_plate_number")
+	@Transient
+	@JsonIgnore
+	@Info(label="车牌号",placeholder="",tip="",help="",secret="")
+	private String  applyPlateNumber;
+
+//	@Column(name = "apply_vehicle_model")
+	@Transient
+	@JsonIgnore
+	@Info(label="车辆型号",placeholder="",tip="",help="",secret="")
+	private String  applyVehicleModel;
+
+//	@Column(name = "GPS_code")
+	@Transient
+	@JsonIgnore
+	@Info(label="GPS编号",placeholder="",tip="",help="",secret="")
+	private String  GPSCode;
+
+//	@Column(name = "apply_annual_survey_maturity")
+	@Transient
+	@JsonIgnore
+	@Info(label="年检到期日",placeholder="",tip="",help="",secret="")
+	@JsonFormat(pattern="yyyy-MM-dd",timezone = "GMT+8")
+	private Date applyAnnualSurveyMaturity;
+
+//	@Column(name = "vehicle_date")
+	@Transient
+	@JsonIgnore
+	@Info(label="车辆年份",placeholder="",tip="",help="和车300网站评估对应，应该是车辆生产日期",secret="")
+	@JsonFormat(pattern="yyyy-MM",timezone = "GMT+8")
+	private Date vehicleDate;
+
+//	@Column(name = "vehicle_km")
+	@Transient
+	@JsonIgnore
+	@Info(label="公里数",placeholder="",tip="",help="和车300网站评估对应，车辆行驶公里数",secret="单位：万公里")
+	private Float vehicleKm;
+
+//	@Column(name = "vehicle_province")
+	@Transient
+	@JsonIgnore
+	@Info(label="车辆省份",placeholder="",tip="",help="和车300网站评估对应，目前只精确到市",secret="")
+	private String  vehicleProvince;
+
+//	@Column(name = "vehicle_city")
+	@Transient
+	@JsonIgnore
+	@Info(label="车辆城市",placeholder="",tip="",help="和车300网站评估对应",secret="")
+	private String  vehicleCity;
+
+	@ManyToOne
+	@JoinColumn(name = "vehicle_id")
+	private Vehicle vehicle;
+	/*******************************车辆信息End*********************************/ 
+	-----李恒光

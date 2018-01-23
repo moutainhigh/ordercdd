@@ -1,0 +1,121 @@
+package com.liyang.controller.domain;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype.DepartmenttypeCode;
+import com.liyang.util.CommonUtil;
+import com.liyang.util.SearchByTimes;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.domain.capitalproduct.Capitalproduct;
+import com.liyang.domain.creditrepayplan.Creditrepayplan;
+import com.liyang.domain.creditrepayplan.CreditrepayplanRepository;
+import com.liyang.domain.loan.Loan;
+
+@RestController
+@RequestMapping("/creditrepayplan")
+public class CreditrepayplanController {
+	@Resource
+	private CreditrepayplanRepository repository;
+	@Resource
+	private DepartmentRepository departmentRepository;
+	
+	@RequestMapping("/search")
+	public EntityPage search(@RequestParam(required=false) Map<String,Object> params) throws TimeConditiosException {
+		GenericQueryExpSpecification<Creditrepayplan> queryExpression = new GenericQueryExpSpecification<Creditrepayplan>();
+		//状态
+		queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"),true));
+		//是否逾期
+		if (params.get("isOverdue")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.eq("isOverdue", Boolean.valueOf(params.get("isOverdue").toString()),true));
+		}
+		//授权门店，创建人部门
+		if (params.get("department_label")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("loan.ordercdd.createdByDepartment.label",
+					params.get("department_label").toString(),true));
+		}
+		//借款人姓名
+		if (params.get("debtorName")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("loan.debtorName",
+					params.get("debtorName").toString(),true));
+		}
+		//借款单号
+		if (params.get("loanSn")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("loanSn", params.get("loanSn").toString(),true));
+		}
+		//根据时间查询
+		if(params.get("timeRangeKey")!=null){
+			SearchByTimes.addTimesConditions(params,queryExpression);
+		}
+		limitField(queryExpression);
+		Page<Creditrepayplan> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+		String[] fields = new String[] {"id","label","createdAt","lastModifiedAt","state","orderSn","loanSn","debtorName","debtorMobile","debtorRepaymentDate","planSn",
+				"creditorRepaymentDate","principal","interest","overdueDays","overdueAmount","accountSettle","leftAmount","fees",
+				"serviceUser","loan","isOverdue"};
+		return customChange(EntityPageUtil.convert(page, fields));
+	}
+
+	private EntityPage customChange(EntityPage page) {
+		List<Map<String,Object>> entities = page.getEntitys();
+		if (entities==null) {
+			return page;
+		}
+		EntityPage newPage = page.clone();
+		Map<Capitalproduct.RepaymentMethodCode,String> repaymentMethodCodeMap = new HashMap<>();
+		repaymentMethodCodeMap.put(Capitalproduct.RepaymentMethodCode.AVERAGE_CAPITAL, "等额本金");
+		repaymentMethodCodeMap.put(Capitalproduct.RepaymentMethodCode.AVERAGE_CAPITAL_PLUS_INTEREST, "等额本息");
+		repaymentMethodCodeMap.put(Capitalproduct.RepaymentMethodCode.BEFORE_INTEREST_AFTER_PRINCIPAL, "先息后本");
+		repaymentMethodCodeMap.put(Capitalproduct.RepaymentMethodCode.LEND_REPAY_ON_DEMAND, "随借随还");
+
+		for (Map<String, Object> map : entities) {
+			if (map==null) {
+				continue;
+			}
+			Object loan1 = map.get("loan");
+			if (loan1 instanceof Loan) {
+				Loan loan2 = (Loan) loan1;
+				Object repaymentMethodCode = loan2.getRepaymentMethodCode();
+				map.put("repaymentMethodCode", repaymentMethodCodeMap.get(repaymentMethodCode));
+				map.put("user_id",loan2.getServiceUser().getId());
+				map.put("person_id",loan2.getDebtorPerson().getId());
+				map.remove("loan");
+
+				Department store = loan2.getOrdercdd().getCreatedByDepartment();
+				String storeName=null;
+				if(store != null){
+					storeName=store.getLabel();
+				}
+				map.put("service_department",storeName);
+			}
+			newPage.add(map);
+		}
+		return newPage;
+	}
+	
+	/**
+     * 限制权限，例如：部门、角色等
+     */
+    private void limitField(GenericQueryExpSpecification<Creditrepayplan> queryExpression) {
+    	Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+    	//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+    	//门店，暂时认为非平台的
+    	if(curDepartmentId.equals(company.getId())) {//如果登录人部门是平台，只查平台一审和平台二审的
+    	}else {//查询其他状态的
+			queryExpression.add(QueryExpSpecificationBuilder.eq("loan.ordercdd.createdByDepartment.id", 
+					curDepartmentId, true));
+		}
+	}
+}

@@ -1,0 +1,36 @@
+<div class="page-bd-15">
+    <form name="bankOneForm">
+        <div class="weui_cells weui_cells_form" style="padding-top: 60px;">
+            <div class="weui_cell">
+                <div class="weui_cell_hd"><label class="weui_label">持卡人</label></div>
+                <div class="weui_cell_bd weui_cell_primary">
+                    <input name="bankName" ng-model="bankName" class="weui_input" type="text"  placeholder="请输入持卡人姓名" required/>
+                </div>
+            </div>
+            <div class="weui_cell">
+                <div class="weui_cell_hd"><label class="weui_label">卡&nbsp;&nbsp;&nbsp;&nbsp;号</label></div>
+                <div class="weui_cell_bd weui_cell_primary">
+                    <input ng-model="bankNumber" onkeyup="this.value=this.value.replace(/\D/g,'').replace(/....(?!$)/g,'$& ')" class="weui_input" type="tel" maxlength="24"  placeholder="请输入银行卡号" required/>
+                </div>
+            </div>
+            <div style="border-top:1px solid #ECECEC;transform-origin: 0 100%;margin-left: 14px; "></div>
+        </div>
+        <button ng-click="toNext()" style="margin-top:55px;" ng-class="{true: 'weui_btn weui_btn_primary', false: 'weui_btn btn_disabled'}[bankOneForm.$valid]" class="weui_btn weui_btn_primary" ng-disabled="!bankOneForm.$valid">下一步</button>
+    </form>
+</div>
+<style scoped>
+    .weui_cells:before{
+        border: none;
+    }
+    .weui_cells:after{
+        border: none;
+    }
+    .weui_btn:after{
+        border: none;
+    }
+    .btn_disabled
+    {
+        background: #D5D5D5;
+        color: #fff;
+    }
+</style>

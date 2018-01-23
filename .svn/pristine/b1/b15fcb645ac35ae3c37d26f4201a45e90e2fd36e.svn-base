@@ -1,0 +1,73 @@
+<script>
+    app.controller("loancollectionHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                $scope.loancollectionloans = [];
+
+                $scope.creditrepayplanOverdue = [];
+
+                $scope.overdueInformation     = null;
+
+                $scope.getProfile = function () {
+
+                    entity.getDetail("/rest/loans/" + $scope.id, ["createdBy", "ordercdd", "creditrepayplans"]).then(function (resResult) {
+
+                        $scope.profile = resResult;
+
+                        console.log($scope.profile)
+
+                        angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                            if (val.actGroup === "UPDATE" || val.actGroup === "OPERATE") {
+                                $scope.canActs.push(val);
+                            }
+                        });
+
+                        $scope.creditrepayplanOverdue = $scope.profile.creditrepayplans._embeddedItems;
+
+
+                        $http({
+                            method: "GET",
+                            url: "/loan/search?loanSn=" + $scope.profile.loanSn
+                        }).success(function (resResult) {
+                            $scope.overdueInformation = resResult.entitys[0];
+                            console.log($scope.overdueInformation)
+                        });
+
+
+
+
+//                        angular.forEach($scope.profile.creditrepayplans._embeddedItems, function (val, key) {
+//                            entity.getDetail(val._links.state.href,[])
+//
+//                        });
+
+                    });
+                };
+
+                $scope.getProfile();
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loancollectionHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

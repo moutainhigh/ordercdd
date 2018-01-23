@@ -1,0 +1,32 @@
+<div class="vbox bg-white">
+    <div class="wrapper bg-white b-b clearfix">
+        <ul class="nav nav-pills nav-sm">
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.info">逾期记录</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'loanrecord',view_type:'plan'})">还款计划</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'loanrecord',view_type:'log'})">还款记录</a>
+            </li>
+            <!--<li ui-sref-active="active">-->
+                <!--<a ui-sref="workflowEntity.home.profile.page({entity_key:'capitalproduct',view_type:'log'})">操作记录</a>-->
+            <!--</li>-->
+        </ul>
+    </div>
+    <!--<div class="wrapper b-b clearfix">-->
+        <!--<button ng-class="act.btnClass"-->
+                <!--ng-click="capitalproductExcute[act.actCode]()"-->
+                <!--tooltip="{{act.help}}"-->
+                <!--tooltip-placement="bottom"-->
+                <!--ng-repeat="act in canActs">-->
+            <!--<i ng-class="act.iconClass"></i> {{act.label}}-->
+        <!--</button>-->
+    <!--</div>-->
+    <div class="row-row">
+        <div class="cell scrollable">
+            <div class="cell-inner" ui-view=""></div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,68 @@
+<script>
+    "use strict";
+    app.controller("personAuditRecordLogController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.logs = [];
+
+                /*
+                 * 获取实体的log记录
+                 * */
+                entity.getList("/rest/ordercdds/" + $scope.id + "/logs").then(function (resResult) {
+
+                    $scope.logs = resResult._embeddedItems;
+
+                    angular.forEach($scope.logs, function (value, index) {
+                        entity.getDetail(value._links.createdBy.href).then(function (resResult) {
+                            value.createdBy = resResult.nickname;
+                            value.avatar    = resResult.headimgurl;
+                        });
+                    });
+
+                    //log记录需要倒序
+                    $scope.logs.sort(function (a, b) {
+                        return new Date(b.lastModifiedAt) - new Date(a.lastModifiedAt);
+                    });
+
+                });
+
+
+            }
+        ]
+    );
+</script>
+<div class="padder-md" ng-controller="personAuditRecordLogController">
+    <div class="m-t-md" ng-if="logs.length < 1">
+        没有更多记录！
+    </div>
+    <div class="streamline b-l b-info m-l-lg m-b padder-v" ng-if="logs.length > 0">
+        <div ng-repeat="log in logs">
+            <a class="pull-left thumb-sm avatar m-l-n-md">
+                <img ng-src="{{ log.avatar }}" class="img-circle">
+            </a>
+            <div class="m-l-lg m-b-lg panel b-a bg-light lt">
+                <div class="panel-heading pos-rlt b-light clearfix">
+                    <span class="arrow arrow-light left"></span>
+                    <span class="text-muted m-r pull-left">{{ log.createdBy }}</span>
+                    <span class="text-muted pull-left">
+                        {{ log.lastModifiedAt | datetime }}
+                    </span>
+                </div>
+                <div class="panel-body">
+                    <div>
+                        <div>进行了&ensp;{{ log.label }}&ensp;操作</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

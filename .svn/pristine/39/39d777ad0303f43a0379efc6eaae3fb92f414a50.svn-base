@@ -1,0 +1,831 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="ordercddExcute[act.actCode](profile)"
+            tooltip="{{act.help}}"
+            ng-hide="act.actCode=='paymentApply' || act.actCode=='uploadPaymentMaterials'|| act.actCode=='uploadSupplement'"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+    <div class="modal fade" id="{{ profile.id }}_failed" tabindex="-1" role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">请填写未通过理由</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-2 text-right">理由</label>
+                        <div class="col-lg-10">
+                                <textarea class="form-control" ng-model="failedVla" cols="9" style="height: 250px">
+                                </textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.failedSave(failedVla,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_submitGPS" tabindex="-1"
+         role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">请填写GPS编号</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-2 text-right">GPS编号</label>
+                        <div class="col-lg-10">
+                            <input class="form-control"
+                                   ng-model="submitGPSVla">
+
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.submitGPSSave(submitGPSVla,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_twoFailed" tabindex="-1"
+         role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">请填写未通过理由</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-2 text-right">理由</label>
+                        <div class="col-lg-10">
+                            <textarea class="form-control"
+                                      ng-model="failedVla" cols="9"
+                                      style="height: 250px">
+                            </textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.twoFailedSave(failedVla,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_distribution" tabindex="-1"
+         role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">分配专属业务员</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix" style="height: 500px;overflow-y: scroll;">
+                        <div class="table-responsive cell-inner">
+                            <table class="table table-hover b-t b-light" style="border-bottom: none;">
+                                <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>员工号</th>
+                                    <th>客服</th>
+                                    <th>没有完成的申请单树</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="user in userList track by $index">
+                                    <td>
+                                        <label class="i-checks i-checks-sm pull-left m-n"
+                                               ng-click="userSelect($event,user)">
+                                            <input type="radio" name="user"><i></i>
+                                            {{user.label }}
+                                        </label>
+                                    </td>
+                                    <td>
+                                        {{ user.id }}
+                                    </td>
+                                    <td>
+                                        {{ user.name }}
+                                    </td>
+                                    <td>
+                                        {{ user.notClone }}
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!--</div>-->
+                    </div>
+
+
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.distributionSave(distributionVal,profile,user_code)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_redistribution" tabindex="-1"
+         role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">分配专属业务员</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix" style="height: 500px;overflow-y: scroll;">
+                        <div class="table-responsive cell-inner">
+                            <table class="table table-hover b-t b-light" style="border-bottom: none;">
+                                <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>员工号</th>
+                                    <th>客服</th>
+                                    <th>没有完成的申请单树</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr ng-repeat="user in userList track by $index">
+                                    <td>
+                                        <label class="i-checks i-checks-sm pull-left m-n"
+                                               ng-click="againUserSelect($event,user)">
+                                            <input type="radio" name="user"><i></i>
+                                            {{user.label }}
+                                        </label>
+                                    </td>
+                                    <td>
+                                        {{ user.id }}
+                                    </td>
+                                    <td>
+                                        {{ user.name }}
+                                    </td>
+                                    <td>
+                                        {{ user.notClone }}
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!--</div>-->
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.redistributionSave(distributionVal,profile,again_user_code)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_upload">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" ng-click="uploader.clearQueue();setUploadDone();"
+                            data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                    <!--上传审核通过的文件-->
+                    <!--{{ headerInformation }}-->
+                    上传合同
+                </div>
+                <div class="modal-body">
+                    <div class="hbox hbox-auto-xs hbox-auto-sm" nv-file-drop="" uploader="uploader"
+                         filters="queueLimit, customFilter">
+                        <div class="col w-lg bg-light b-r bg-auto">
+                            <div class="wrapper-md dker b-b">
+                                <h4 class="m-n font-thin">选择文件</h4>
+                            </div>
+                            <div class="wrapper-md">
+                                <form name="myForm" class="m-b-md">
+                                    <div>
+                                        <select class="form-control"
+                                                ng-model="capital"
+                                                ng-options="capital.label for capital in capitals"
+                                                ng-change="getCapitalContractType(capital)"></select>
+                                        <select class="form-control m-t-md"
+                                                name="capitalContract"
+                                                ng-model="capitalContract"
+                                                ng-options="capitalContract.label for capitalContract in capitalContracts"
+                                                ng-change="setSubCategory(capitalContract)" required>
+                                        </select>
+                                    </div>
+                                    <div ng-show="myForm.capitalContract.$invalid">
+                                            <span class="help-block text-danger">
+                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;该项必填
+                                            </span>
+                                        <!--<span class="supCol">该项必填</span>-->
+                                    </div>
+                                </form>
+                                <input id="audit_zip_file_input" class="w" type="file" nv-file-select=""
+                                       multiple
+                                       uploader="uploader"/>
+                            </div>
+                        </div>
+                        <div class="col bg-light bg-auto">
+                            <div class="wrapper-md bg-light dk b-b">
+                                    <span class="pull-right">文件数：
+                                        <b class="badge bg-info">{{ uploader.queue.length }}</b>
+                                    </span>
+                                <h4 class="m-n font-thin text-danger ">文件上传</h4>
+                            </div>
+                            <div class="wrapper-md">
+                                <table class="table bg-white-only b-a">
+                                    <thead>
+                                    <tr>
+                                        <th>文件名</th>
+                                        <th ng-show="uploader.isHTML5">大小</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="item in uploader.queue">
+                                        <td>
+                                            <div class="text-ellipsis w-sm">{{ item.file.name }}</div>
+                                        </td>
+                                        <td ng-show="uploader.isHTML5" nowrap>{{ item.file.size/1024/1024|number:2
+                                            }} MB
+                                        </td>
+                                        <td class="text-center">
+                                                <span ng-show="item.isSuccess" class="text-success">
+                                                    <i class="fa fa-check"></i>
+                                                </span>
+                                            <span ng-show="item.isCancel" class="text-warning">
+                                                    <i class="fa fa-ban"></i>
+                                                </span>
+                                            <span ng-show="item.isError" class="text-danger">
+                                                    <i class="fa fa-cancel"></i>
+                                                </span>
+                                        </td>
+                                        <td nowrap>
+                                            <!--<button type="button" class="btn btn-default btn-xs"-->
+                                            <!--ng-click="item.upload()"-->
+                                            <!--ng-disabled="item.isReady || item.isUploading || item.isSuccess">-->
+                                            <!--上传-->
+                                            <!--</button>-->
+                                            <button ng-disabled="item.isReady || item.isUploading || item.isSuccess"
+                                                    type="button" class="btn btn-default btn-xs"
+                                                    ng-click="item.remove();setUploadDone();">
+                                                清除
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <div>
+                                    <div>
+                                        <p>进度</p>
+                                        <div class="progress bg-light dker" style="">
+                                            <div class="progress-bar progress-bar-striped bg-info"
+                                                 role="progressbar"
+                                                 ng-style="{ 'width': uploader.progress + '%' }"></div>
+                                        </div>
+                                        <div class="m-t m-b font-bold h4 text-danger"
+                                             ng-if="uploader.progress === 100 && !uploadDone">服务器正在处理中，请稍等。。。
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-addon btn-success"
+                                            ng-click="uploader.uploadAll()"
+                                            ng-disabled="!uploader.getNotUploadedItems().length || !capitalContract">
+                                        <i class="fa fa-arrow-circle-o-up"></i> 上传
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_matching" tabindex="-1"
+         role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">匹配销售产品</h4>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group clearfix">
+                        <label class="col-lg-2 " style="margin-top: 8px">销售产品</label>
+                        <div class="col-lg-10">
+                            <select ng-model="productVal"
+                                    class="form-control"
+                                    ng-options="y.label for (x,y) in productList">
+                                <option value="">--请销售产品--</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.matchingSave(productVal,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_modifyApplyAmount"
+         tabindex="-1" role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">请输入修改额度</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-4 control-label text-right">当前额度：</label>
+                        <div class="col-lg-8">
+                            <span>{{ profile.applyAmount }}</span>
+                        </div>
+                    </div>
+                    <div class="form-group clearfix">
+                        <label class="col-lg-4 control-label text-right">额度：</label>
+                        <div class="col-lg-8">
+                            <input type="text" class="form-control"
+                                   ng-model="modifyApplyAmountVal">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.modifyApplyAmountSave(modifyApplyAmountVal,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_changeID" tabindex="-1"
+         role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">请输入修改身份证号</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-4 control-label text-right">当前身份证：</label>
+                        <div class="col-lg-8">
+                            <span>{{ profile.applyIdentityNo }}</span>
+                        </div>
+                    </div>
+                    <div class="form-group clearfix">
+                        <label class="col-lg-4 control-label text-right">修改为：</label>
+                        <div class="col-lg-8">
+                            <input type="text" class="form-control"
+                                   ng-model="changeIDVal">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="ordercddExcute.changeIDSave(changeIDVal,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="wrapper" ng-if="profile.comment">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-danger">
+                <div class="panel-heading">
+                    驳回理由
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">驳回理由：</td>
+                        <td class="v-middle w-xl">{{ profile.comment }}</td>
+                        <td class="v-middle text-right w-sm"></td>
+                        <td class="v-middle w-xl"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="wrapper">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    个人信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm" data-toggle="tooltip"
+                        title="底部的 Tooltip">客户姓名：</td>
+                        <td class="v-middle w-xl">{{ profile.realName }}</td>
+                        <td class="v-middle text-right w-sm">联系方式：</td>
+                        <td class="v-middle w-xl">{{ profile.applyMobile }}</td>
+                    </tr>
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">性别：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.sex=="1"?"男":(profile.sex=="1"?"女":"") }}</td>-->
+                        <!--<td class="v-middle text-right w-sm">婚姻状况：</td>-->
+                        <!--&lt;!&ndash;<td class="v-middle w-xl">{{  profile.maritalStatus=="UNMARRIED"?"未婚":(profile.maritalStatus=="MARRIED"?"已婚":(profile.maritalStatus=="WIDOWED"?"丧偶":(profile.maritalStatus=="DIVORCE"?"离异"：""))) }}</td>&ndash;&gt;-->
+                        <!--<td class="v-middle w-xl">{{-->
+                            <!--profile.maritalStatus=="UNMARRIED"?"未婚":(profile.maritalStatus=="MARRIED"?"已婚":(profile.maritalStatus=="WIDOWED"?"丧偶":(profile.maritalStatus=="DIVORCE"?"离异":"")))-->
+                            <!--}}-->
+                        <!--</td>-->
+                    <!--</tr>-->
+                    <tr>
+                        <td class="v-middle text-right w-sm">身份证号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyIdentityNo }}</td>
+                        <td class="v-middle text-right w-sm">服务城市：</td>
+                        <td class="v-middle w-xl">{{ profile.applyEnterpriseProvince }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">储蓄卡支行：</td>
+                        <td class="v-middle w-xl">{{ profile.applyBankCardBranch }}</td>
+                        <td class="v-middle text-right w-sm">储蓄卡卡号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyBankCard }}</td>
+                        <!--<td class="v-middle text-right w-sm">电子邮箱：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.email }}</td>-->
+                    </tr>
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">身份证号：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.applyIdentityNo }}</td>-->
+                        <!--<td class="v-middle text-right w-sm">个人地址：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.personalAddress }}</td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">单位名称：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.companyName }}</td>-->
+                        <!--<td class="v-middle text-right w-sm">单位电话：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.companyTelephone }}</td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">单位地址：</td>-->
+                        <!--<td class="v-middle" colspan="3">{{ profile.companyAddress }}</td>-->
+                    <!--</tr>-->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    贷款信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm"  >借款总额：</td>
+                        <td class="v-middle w-xl" >{{ profile.applyAmount }}</td>
+                        <td class="v-middle text-right w-sm">借款单号：</td>
+                        <td class="v-middle w-xl">{{ profile.loan.loanSn?profile.loan.loanSn:'借款审核中' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">总订单数：</td>
+                        <td class="v-middle w-xl" >{{ historyLoan.orderSize }}</td>
+                        <td class="v-middle text-right w-sm info-td" data-toggle="tooltip"
+                            title="实际放款至客户的金额总和（不包含此订单）">放款总额：</td>
+                        <td class="v-middle w-xl">{{ historyLoan.amountCount }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">全部资方：</td>
+                        <td class="v-middle "  colspan="3">{{ historyLoan.captials.length==0?'暂无':historyLoan.captials.join(',') }}</td>
+
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--<div class="wrapper">-->
+    <!--<div class="row">-->
+        <!--<div class="col-sm-12">-->
+            <!--<div class="panel panel-info">-->
+                <!--<div class="panel-heading">-->
+                    <!--全部贷款信息-->
+                <!--</div>-->
+                <!--<table class="table table-striped m-b-none">-->
+                    <!--<tbody>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">全部订单数：</td>-->
+                        <!--<td class="v-middle w-xl" >{{ historyLoan.orderSize }} </td>-->
+                        <!--<td class="v-middle text-right w-sm"></td>-->
+                        <!--<td class="v-middle w-xl" ></td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">全部借款总额：</td>-->
+                        <!--<td class="v-middle w-xl" >{{ historyLoan.amountCount }}</td>-->
+                        <!--<td class="v-middle text-right w-sm"></td>-->
+                        <!--<td class="v-middle w-xl" ></td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right w-sm">全部资方：</td>-->
+                        <!--<td class="v-middle w-xl" >{{ historyLoan.captials.length==0?'暂无':historyLoan.captials.join(',') }}</td>-->
+                        <!--<td class="v-middle text-right w-sm"></td>-->
+                        <!--<td class="v-middle w-xl" ></td>-->
+                    <!--</tr>-->
+                    <!--</tbody>-->
+                <!--</table>-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
+<!--</div>-->
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    车辆信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <!--<td class="v-middle text-right w-sm">GPS状态：</td>-->
+                        <!--<td class="v-middle">{{ profile.gpsStatus | gpsStatus }}</td>-->
+                        <td class="v-middle text-right w-sm">GPS编号：</td>
+                        <td class="v-middle" colspan="3">{{ profile.gpscode | nullToString }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">车牌号：</td>
+                        <td class="v-middle w-xl info-td" ui-sref="workflowEntity.home.profile.info({id:profile.vehicle.id,entity_key:'vehicle'})">{{ profile.applyPlateNumber | nullToString }}</td>
+                        <td class="v-middle text-right w-sm">车辆型号：</td>
+                        <td class="v-middle w-xl">{{ profile.applyVehicleModel | nullToString }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">上牌区域：</td>
+                        <td class="v-middle w-xl">{{profile.vehicleProvince}} {{profile.vehicleCity}}</td>
+                        <td class="v-middle text-right w-sm">车辆年份：</td>
+                        <td class="v-middle w-xl">{{profile.vehicleDate?(profile.vehicleDate | toLocalMonth):"没有填时间" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">年检到期日：</td>
+                        <td class="v-middle">{{ profile.applyAnnualSurveyMaturity?(profile.applyAnnualSurveyMaturity |
+                            toLocalDate):"没有填时间" }}
+                        </td>
+                        <td class="v-middle text-right w-sm">保单到期日：</td>
+                        <td class="v-middle">{{ profile.applyAnnualPolicyMaturity?(profile.applyAnnualPolicyMaturity |
+                            toLocalDate):"没有填时间" }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">公里数：</td>
+                        <td class="v-middle" colspan="3">{{ profile.vehicleKm | nullToString }} 万公里</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    销售产品
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">产品名称：</td>
+                        <td class="v-middle w-xl"  >{{ profile.product.label }}</td>
+                        <td class="v-middle text-right w-sm">还款方式：</td>
+                        <td class="v-middle w-xl">{{ allEntitiesInfo.product.repaymentMethodCode.values[profile.repaymentMethodCode].label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">给客户的年利率：</td>
+                        <td class="v-middle w-xl">{{ profile.product.debtorInterest?profile.product.debtorInterest:''}}</td>
+                        <td class="v-middle text-right w-sm">给门店的年利率：</td>
+                        <td class="v-middle w-xl">{{ profile.product.storeInterest?profile.product.storeInterest:""}}</td>
+                        <!--<td class="v-middle text-right w-sm">最小借款：</td>-->
+                        <!--<td class="v-middle w-xl">{{ profile.product.storeAmountMin }}</td>-->
+                        <!--<td class="v-middle text-right w-sm">最大借款：</td>-->
+                        <!--<td class="v-middle" >{{ profile.product.storeAmountMax }}</td>-->
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">分期数：</td>
+                        <td class="v-middle w-xl" >{{ profile.product.periodNumber }}</td>
+                        <td class="v-middle text-right w-sm">还款账户：</td>
+                        <td class="v-middle w-xl">{{ productVal.repaymentAccount.accountIdentity }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">还款账户支行：</td>
+                        <td class="v-middle w-xl"  >{{ productVal.repaymentAccount.branchName }}</td>
+                        <td class="v-middle text-right w-sm">还款账户持有人：</td>
+                        <td class="v-middle w-xl">{{ productVal.repaymentAccount.realName }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">采用砍头利息：</td>
+                        <td class="v-middle"  colspan="3">{{ profile.isInterestAdvance == true?"是":"否" }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    门店收费项目
+                </div>
+                <table class="table table-striped m-b-none">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>收费项目名称</th>
+                        <th>分期</th>
+                        <th>分期数</th>
+                        <th>收费方式</th>
+                        <th>数值</th>
+                        <th>是否退回</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="fee in feetypeStore" >
+                        <td class="v-middle">
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.label }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isPeriod == "true" ? "分期":"不分期" }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.periodNumber | nullToNumber}}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRepayment == "false" ? "固定收费(元)"  : "按比例收费" }}
+                        </td>
+                        <td class="v-middle" >
+                            {{ fee.feeVal | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRefund == "true" ? "可退":"不可退" }}
+                        </td>
+                        <td class="v-middle w-xl">
+                            {{ fee.comment }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    平台收费项目
+                </div>
+                <table class="table table-striped m-b-none">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>收费项目名称</th>
+                        <th>分期</th>
+                        <th>分期数</th>
+                        <th>收费方式</th>
+                        <th>数值</th>
+                        <th>是否退回</th>
+                        <th>说明</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="fee in feetypes">
+                        <td class="v-middle">
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.label }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isPeriod == "true" ? "分期":"不分期" }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.periodNumber | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRepayment == "false" ? "固定收费(元)"  : "按比例收费" }}
+                        </td>
+                        <td class="v-middle" >
+                            {{ fee.feeVal | nullToNumber }}
+                        </td>
+                        <td class="v-middle">
+                            {{ fee.isRefund == "true" ? "可退":"不可退" }}
+                        </td>
+                        <td class="v-middle w-xl">
+                            {{ fee.comment }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    其他
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">推荐人：</td>
+                        <td class="v-middle w-xl" >{{ historyLoan.referralUser.nickname==null?'暂无':historyLoan.referralUser.nickname }} </td>
+                        <td class="v-middle text-right w-sm">推荐码：</td>
+                        <td class="v-middle w-xl" >{{ historyLoan.referralCode==null?'暂无':historyLoan.referralCode }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">业务员：</td>
+                        <td class="v -middle w-xl list-hover-a" >
+                            <a ui-sref="workflowEntity.home.profile.info({id:historyLoan.serviceName.serviceid,entity_key:'manager'})">{{ historyLoan.serviceName.servicename }} </a>
+                        </td>
+                        <td class="v-middle text-right w-sm">订单号：</td>
+                        <td class="v-middle w-xl" >{{ profile.cddSn }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--<div class="wrapper">-->
+    <!--<div class="row">-->
+        <!--<div class="col-xs-12 col-sm-10">-->
+            <!--<div class="panel panel-info">-->
+                <!--<div class="panel-heading">-->
+                    <!--业务员-->
+                <!--</div>-->
+                <!--<table class="table table-striped m-b-none">-->
+                    <!--<tbody>-->
+                   <!---->
+
+                    <!--</tbody>-->
+                <!--</table>-->
+            <!--</div>-->
+        <!--</div>-->
+    <!--</div>-->
+<!--</div>-->

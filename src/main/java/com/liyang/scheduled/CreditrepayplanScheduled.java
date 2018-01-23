@@ -1,0 +1,74 @@
+package com.liyang.scheduled;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Resource;
+
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.liyang.domain.creditrepayplan.Creditrepayplan;
+import com.liyang.domain.creditrepayplan.CreditrepayplanRepository;
+import com.liyang.domain.creditrepayplan.CreditrepayplanState;
+import com.liyang.domain.creditrepayplan.CreditrepayplanStateRepository;
+import com.liyang.domain.loan.Loanoverdue;
+import com.liyang.domain.loan.LoanoverdueRepository;
+
+/**
+ * 还款计划定时计算
+ */
+@Component
+public class CreditrepayplanScheduled {
+	
+	private static final long INTERVAL = 1000*60*60*24*30L;//30天
+	//还款计划表状态
+	private static final String STATECODE_ACCOUNT = "ACCOUNT";//待出账
+	private static final String STATECODE_ACCOUNTED = "ACCOUNTED";//已出账
+	
+	@Resource
+	private CreditrepayplanRepository planRepository;
+	@Resource
+	private CreditrepayplanStateRepository planStateRepository;
+	@Resource
+	private LoanoverdueRepository loanoverdueRepository;
+	
+	/**
+	 * 定时计算还款计划日期，激活还款计划
+	 */
+	@Scheduled(cron = "0 0 0 * * ?")
+	public void activePlan() {
+		//待出账计划
+		List<Creditrepayplan> list = planRepository.getByStatCode(STATECODE_ACCOUNT);
+		if (list==null) {
+			return;
+		}
+		CreditrepayplanState accounted = planStateRepository.findByStateCode(STATECODE_ACCOUNTED);
+		//循环计算时间
+		List<Creditrepayplan> changeList = new ArrayList<>();
+		Date currentDate = new Date();
+		Date planDate = null;
+		for (Creditrepayplan creditrepayplan : list) {
+			if (creditrepayplan == null) {
+				continue;
+			}
+			planDate = creditrepayplan.getDebtorRepaymentDate();
+			if (planDate.before(currentDate)) {//如果借方正常还款日期已经过了，马上激活
+				creditrepayplan.setState(accounted);
+				changeList.add(creditrepayplan);
+				continue;
+			}
+			long difTime = planDate.getTime() - currentDate.getTime();
+			if (difTime < INTERVAL) {//如果计划日期和当前日期的差值小于30天，激活
+				creditrepayplan.setState(accounted);
+				changeList.add(creditrepayplan);
+				continue;
+			}
+		}
+		if (changeList.isEmpty()) {
+			return;
+		}
+		planRepository.save(changeList);
+	}
+}

@@ -1,0 +1,370 @@
+<script>
+    "use strict";
+    app.controller("capitalproductListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, entity) {
+
+                $scope.states = [];
+
+                /*搜索值的对象*/
+                $scope.searchForms = {};
+
+                $scope.forms = {};
+
+
+                /*
+                *repaymentMethod 还款规则
+                * */
+                $scope.repaymentMethodCode    = null;
+                $scope.repaymentMethodCodeVal = null;
+
+                /*
+                *department  部门
+                * */
+                $scope.department    = null;
+                $scope.departmentVal = null;
+
+
+                /*初始值*/
+//                $scope.forms.state_id = $scope.state_id;
+                $scope.forms.size     = "10";
+                $scope.forms.sort     = "lastModifiedAt,desc";
+
+
+                entity.getList("getEntityInfo").then(function (response) {
+
+                    $rootScope.allEntitiesInfo = response;
+
+                    $scope.repaymentMethodCode = $rootScope.allEntitiesInfo.capitalproduct.repaymentMethodCode.values;
+
+                });
+
+
+                /*拿所有资方*/
+                $scope.departmentCredior = function () {
+                    entity.getList("rest/departmenttypes?size=10000").then(function (departmentResResult) {
+                        angular.forEach(departmentResResult._embeddedItems, function (val, key) {
+                            if (val.departmenttypeCode === "CREDITOR") {
+                                //获取所有部门
+                                entity.getList(val._links.departments.href).then(function (departmentResResult) {
+                                    $scope.department = departmentResResult._embeddedItems;
+
+//                                    $scope.departmentVal = $scope.department[0];
+
+                                });
+                            }
+                        })
+                    });
+                };
+                $scope.departmentCredior();
+
+                entity.getList("/rest/capitalproductWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+
+                        if (window.sessionStorage.getItem(window.myinfo.id + "_capitalproduct_state_code")) {
+                            angular.forEach($scope.states, function (val, key) {
+                                if (val.id == window.sessionStorage.getItem(window.myinfo.id + "_capitalproduct_state_code")) {
+                                    $scope.stateVal       = $scope.states[key];
+                                    $scope.forms.state_id = val.id;
+                                    $scope.state_id       = val.id;
+                                    $scope.getList(0);
+                                }
+
+                            })
+                        } else {
+                            $scope.forms.state_id = null;
+                            $scope.getList(0);
+                        }
+
+                    }
+                });
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    $scope.forms.page = page;
+
+
+                    $http.get("/capitalproduct/search", {
+                        params: $scope.forms
+                    }).success(function (resResult) {
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult.entitys);
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.size,
+                                total_elements: resResult.totalElements,
+                                current_page: resResult.number,
+                                num_page: resResult.totalPages,
+                                total_page: resResult.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#capitalproduct_list_paginator", $scope.pageList, $scope.getList);
+                    });
+                };
+
+//                $scope.stateSelect = function ($event, stateId) {
+//                    console.log(stateId);
+//                    if ($event.target.nodeName === "INPUT") {
+//                        $scope.state_id = stateId;
+//                        $scope.clearSearch();
+//                    }
+//                };
+
+
+                $scope.stateChange = function (val) {
+                    $scope.forms = {};
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "id,desc";
+                    if(val){
+                        window.sessionStorage.setItem(window.myinfo.id + "_capitalproduct_state_code", val.id);
+
+                        $scope.state_id = val.id;
+
+                        $scope.forms.state_id = val.id;
+                        // $scope.getList(0);
+                        // $scope.searchSubmit();
+                    }else {
+                        window.sessionStorage.setItem(window.myinfo.id + "_capitalproduct_state_code", "");
+
+                        $scope.state_id = null;
+                        $scope.forms.state_id = null;
+                        // $scope.getList(0);
+                        console.log($scope.forms);
+                        // $scope.searchSubmit();
+                    }
+                };
+
+
+                $scope.searchSubmit = function () {
+
+                    $scope.searchForms.repayment_method_code = $scope.repaymentMethodCodeVal ? $scope.repaymentMethodCodeVal.secret : null;
+                    /*所属资方*/
+                    $scope.searchForms.creditor_department_id = $scope.departmentVal ? $scope.departmentVal.id : null;
+
+                    /*合并对象*/
+                    $scope.forms = Object.assign($scope.searchForms,$scope.forms);
+
+                    $scope.getList(0)
+
+                };
+
+
+                //清除搜索
+                $scope.clearSearch = function () {
+                    $scope.forms = {};
+                    $scope.searchForms = {};
+
+                    if($scope.state_id){
+                        $scope.forms.state_id = $scope.state_id;
+                    }else {
+                        $scope.forms.state_id = null;
+                    }
+
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "id,desc";
+
+                    $scope.departmentVal          = null;
+                    $scope.repaymentMethodCodeVal = null;
+                    $scope.getList(0);
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="capitalproductListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <form class="form-inline">
+                    <div class="clearfix">
+                        <div class="form-group m-r">
+                            <label for="capitalproduct_state" style="width:98px;text-align:right;">状态：</label>
+                            <select ng-model="stateVal"
+                                    class="form-control input-sm" style="width:150px;"
+                                    id="capitalproduct_state"
+                                    ng-options="y.label for (x,y) in states"
+                                    ng-change="stateChange(stateVal)">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="capitalproduct_searchCreditorDepartment">所属资方：</label>
+                            <select ng-model="departmentVal"
+                                    class="form-control input-sm" style="width:150px;"
+                                    id="capitalproduct_searchCreditorDepartment"
+                                    ng-options="y.label for (x,y) in department">
+                                <option value="">不选择</option>
+                            </select>
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="capitalproduct_searchRepaymentMethodCode">还款方式：</label>
+                            <select ng-model="repaymentMethodCodeVal"
+                                    class="form-control input-sm" style="width:150px;"
+                                    id="capitalproduct_searchRepaymentMethodCode"
+                                    ng-options="y.label for (x,y) in repaymentMethodCode"
+                            >
+                                <option value="">不选择</option>
+                            </select>
+                        </div>
+                        <div class="pull-right inline">
+                            <button class="btn btn-sm btn-danger btn-addon" ui-sref="workflowEntity.form">
+                                <i class="fa fa-star"></i>
+                                新建
+                            </button>
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <div class="form-group m-r">
+                            <label for="capitalproduct_searchLabel">资金产品名称：</label>
+                            <input type="text"
+                                   class="form-control input-sm" style="width:150px;"
+                                   id="capitalproduct_searchLabel"
+                                   ng-model="searchForms.label">
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <button class="btn btn-sm btn-primary m-r" ng-click="searchSubmit()">
+                            <i class="fa fa-search"></i>
+                            查询
+                        </button>
+                        <button class="btn btn-sm btn-default m-r" ng-click="clearSearch()">
+                            <i class="fa fa-refresh"></i>
+                            清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light" style="border-bottom: none;table-layout: fixed">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>产品名称</th>
+                                            <th>所属资方</th>
+                                            <th>年利率</th>
+                                            <th>还款方式</th>
+                                            <th>状态</th>
+                                            <!--<th>创建时间</th>-->
+                                            <th>最后更新时间</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>
+                                                        </li>
+                                                        <li><a ui-sref="workflowEntity.form({id:item.id})">编辑</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.label }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.creditorDepartment_label?item.creditorDepartment_label:"无" }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.creditorInterest }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.repaymentMethodCode=="LEND_REPAY_ON_DEMAND"? "随借随还":(item.repaymentMethodCode=="BEFORE_INTEREST_AFTER_PRINCIPAL"?"先息后本":(item.repaymentMethodCode=="AVERAGE_CAPITAL_PLUS_INTEREST"?"等额本息":(item.repaymentMethodCode=="AVERAGE_CAPITAL"?"等额本金":"暂无设置"))) }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.state_label?item.state_label:"无" }}
+                                            </td>
+                                            <!--<td class="v-middle">-->
+                                            <!--{{ item.createdAt | datetime }}-->
+                                            <!--</td>-->
+                                            <td class="v-middle">
+                                                {{ item.lastModifiedAt | datetime }}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="capitalproduct_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }} 条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /hbox layout -->

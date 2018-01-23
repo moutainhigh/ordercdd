@@ -1,0 +1,199 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="capitalPaymentExcute[act.actCode](profile)"
+            tooltip="{{act.help}}"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+    <!--上传凭证-->
+    <div class="modal fade" id="{{ profile.id }}_upload">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" ng-click="uploader.clearQueue();setUploadDone();"
+                            data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                    <!--上传审核通过的文件-->
+                    {{ headerInformation }}
+                </div>
+                <div class="modal-body">
+                    <div class="hbox hbox-auto-xs hbox-auto-sm" nv-file-drop="" uploader="uploader"
+                         filters="queueLimit, customFilter">
+                        <div class="col w-lg bg-light b-r bg-auto">
+                            <div class="wrapper-md dker b-b">
+                                <h4 class="m-n font-thin">选择文件</h4>
+                            </div>
+                            <div class="wrapper-md">
+                                <div ng-show="uploader.isHTML5" class="m-b-md">
+                                    <!-- 3. nv-file-over uploader="link" over-class="className" -->
+                                    <div class="b-a b-2x b-dashed wrapper-lg bg-white text-center m-b"
+                                         nv-file-over="" over-class="b-info" uploader="uploader">
+                                        拖动文件放到此处
+                                    </div>
+                                </div>
+                                <input id="audit_zip_file_input" class="w file-transparent" type="file" nv-file-select=""
+                                       uploader="uploader"/>
+                            </div>
+                        </div>
+                        <div class="col bg-light bg-auto">
+                            <div class="wrapper-md bg-light dk b-b">
+                                <span class="pull-right">文件数：
+                                    <b class="badge bg-info">{{ uploader.queue.length }}</b>
+                                </span>
+                                <h4 class="m-n font-thin text-danger ">{{promptInformation}}</h4>
+                            </div>
+                            <div class="wrapper-md">
+                                <table class="table bg-white-only b-a">
+                                    <thead>
+                                    <tr>
+                                        <th>文件名</th>
+                                        <th ng-show="uploader.isHTML5">大小</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="item in uploader.queue">
+                                        <td>
+                                            <div class="text-ellipsis w-sm">{{ item.file.name }}</div>
+                                        </td>
+                                        <td ng-show="uploader.isHTML5" nowrap>{{ item.file.size/1024/1024|number:2
+                                            }} MB
+                                        </td>
+                                        <td class="text-center">
+                                                <span ng-show="item.isSuccess" class="text-success">
+                                                    <i class="fa fa-check"></i>
+                                                </span>
+                                            <span ng-show="item.isCancel" class="text-warning">
+                                                    <i class="fa fa-ban"></i>
+                                                </span>
+                                            <span ng-show="item.isError" class="text-danger">
+                                                    <i class="fa fa-cancel"></i>
+                                                </span>
+                                        </td>
+                                        <td nowrap>
+                                            <button type="button" class="btn btn-default btn-xs"
+                                                    ng-click="item.upload()"
+                                                    ng-disabled="item.isReady || item.isUploading || item.isSuccess">
+                                                上传
+                                            </button>
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="item.isReady || item.isUploading || item.isSuccess"
+                                                    ng-click="item.remove();setUploadDone();">
+                                                清除
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <div>
+                                    <div>
+                                        <p>进度</p>
+                                        <div class="progress bg-light dker" style="">
+                                            <div class="progress-bar progress-bar-striped bg-info"
+                                                 role="progressbar"
+                                                 ng-style="{ 'width': uploader.progress + '%' }"></div>
+                                        </div>
+                                        <div class="m-t m-b font-bold h4 text-danger"
+                                             ng-if="uploader.progress === 100 && !uploadDone">服务器正在处理中，请稍等。。。
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-addon btn-success"
+                                            ng-click="uploader.uploadAll()"
+                                            ng-disabled="!uploader.getNotUploadedItems().length">
+                                        <i class="fa fa-arrow-circle-o-up"></i> 上传
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    申请信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">手机号码：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.applyMobile }}</td>
+                        <td class="v-middle text-right w-sm">身份证号：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.applyIdentityNo }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">申请额度：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.applyAmount }}</td>
+                        <td class="v-middle text-right w-sm">借款期限：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.applyPeriodNumber }}</td>
+                    </tr>
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right">快递网点名称：</td>-->
+                        <!--<td class="v-middle">{{ profile.applyEnterpriseName }}</td>-->
+                        <!--<td class="v-middle text-right">经营区域：</td>-->
+                        <!--<td class="v-middle" >-->
+                            <!--{{ profile.applyEnterpriseProvince }}-->
+                            <!--{{ profile.applyEnterpriseCity }}-->
+                            <!--{{ profile.applyEnterpriseDistrict }}-->
+                        <!--</td>-->
+                    <!--</tr>-->
+                    <!--<tr>-->
+                        <!--<td class="v-middle text-right">办公区域：</td>-->
+                        <!--<td class="v-middle">{{ profile.applyEnterpriseAddress }}</td>-->
+                    <!--</tr>-->
+                    <tr>
+                        <td class="v-middle text-right">推荐人：</td>
+                        <td class="v-middle">{{ profile.applyReferrerRealName?profile.applyReferrerRealName:"无" }}</td>
+                        <td class="v-middle text-right">创建时间：</td>
+                        <td class="v-middle">{{ profile.createdAt | datetime }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!--<div class="clearfix m-b-md" ng-if="accountShow">-->
+                <!--<div class="pull-left m-r" style="width: 410px;">-->
+                    <!--<div class="wrapper-md bg-white" style="border: 1px solid #E7EBED;">-->
+                        <!--<div class="bg-info text-center" style="width: 80px;height: 50px; line-height: 50px;border-radius: 5px;">-->
+                            <!--<span class="text-white font-bold">小金银行</span>-->
+                        <!--</div>-->
+                        <!--<div class="m-t-md m-b-md text-muted font-thin h4">-->
+                            <!--1234 4321 3214 3241-->
+                        <!--</div>-->
+                        <!--<div class="clearfix">-->
+                            <!--<div class="pull-left clearfix">-->
+                                <!--<span class="pull-left font-bold">过期时间：</span>-->
+                                <!--<span class="pull-left">20/09</span>-->
+                            <!--</div>-->
+                            <!--<div class="pull-right clearfix">-->
+                                <!--<span class="pull-left font-bold">持卡人：</span>-->
+                                <!--<span class="pull-left">力饼</span>-->
+                            <!--</div>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                <!--</div>-->
+                <!--<div class="pull-left w-xl">-->
+                    <!--<button class="btn btn-sm btn-success btn-addon" ui-sref="workflowEntity.home.profile.info({entity_key:'account',state_code:accountList.state_code,id:accountList.id})">-->
+                        <!--<i class="fa fa-credit-card"></i> 账户详情-->
+                    <!--</button>-->
+                    <!--<div class="line line-dashed b-b"></div>-->
+                    <!--<div>创建时间：{{ accountList.createdAt | datetime }}</div>-->
+                    <!--<div class="line line-dashed b-b"></div>-->
+                    <!--<div>提示：{{ accountList.notice }}</div>-->
+                    <!--<div class="line line-dashed b-b"></div>-->
+                    <!--<div>账号：{{ accountList.account }}</div>-->
+                    <!--<div class="line line-dashed b-b m-b-n"></div>-->
+                <!--</div>-->
+            <!--</div>-->
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+            <!--<div class="m-t">记录...</div>-->
+        <!--</div>-->
+    </div>
+</div>

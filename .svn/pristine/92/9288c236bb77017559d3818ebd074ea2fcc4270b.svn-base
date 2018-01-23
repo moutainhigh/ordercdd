@@ -1,0 +1,70 @@
+<script>
+    app.controller("loanrecordController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.loanoverdues     = {};
+                $scope.creditrepayplans = {};
+                $scope.creditrepayments = {};
+//                $scope.canActs     = [];
+//                $scope.canFileActs = [];
+
+
+//                逾期记录
+                $http({
+                    method:"GET",
+                    url:"/rest/loans/"+$scope.id+"/loanoverdues"
+                }).success(function (res) {
+                    console.log(res,'a')
+                    $scope.loanoverdues = res._embedded.loanoverdues;
+                    if($scope.loanoverdues.length >0){
+                        $scope.loanoverdues = $scope.loanoverdues.sort(function (a,b) {
+                            return a.id -b.id;
+                        })
+                    }
+                });
+
+//                还款计划
+                $http({
+                    method:"GET",
+                    url:"/rest/loans/"+$scope.id+"/creditrepayplans"
+                }).success(function (res) {
+
+                    $scope.creditrepayplans = res._embedded.creditrepayplans;
+                    if($scope.creditrepayplans.length >0){
+                        $scope.creditrepayplans = $scope.creditrepayplans.sort(function (a,b) {
+                            return a.id -b.id;
+                        })
+                    }
+
+                });
+
+//                还款记录
+                $http({
+                    method:"GET",
+                    url:"/rest/loans/"+$scope.id+"/creditrepayments"
+                }).success(function (res) {
+                    console.log(res,'c')
+                    $scope.creditrepayments = res._embedded.creditrepayments
+                });
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loanrecordController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

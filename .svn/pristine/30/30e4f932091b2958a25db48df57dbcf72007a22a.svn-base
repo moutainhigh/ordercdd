@@ -1,0 +1,289 @@
+<script>
+    "use strict";
+    app.controller("storeBonusListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.profile = {};
+                $scope.canActs = [];
+                $scope.canFileActs = [];
+
+
+                $scope.profile_id = null;
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "取消",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "storeBonus"}, {reload: true});
+                        });
+                    });
+                };
+
+
+
+                /*
+               * 上传文件表头
+               * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+
+
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipName = "";
+
+                /*大方法的对象*/
+                $scope.storeBonusExcute = {
+                    /*放款*/
+                    "bonus": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否放款", "/rest/storeBonuses/" + profile.id, {
+                            act: "bonus",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /* 上传凭证*/
+                    "uploadMaterials": function (profile) {
+                        $scope.profile_id  = profile.id;
+                        $scope.actCode           = "uploadMaterials";
+                        $scope.headerInformation = "上传凭证";
+                        $scope.promptInformation = "上传图片";
+                        $scope.uploader.clearQueue();
+                        $("#" + profile.id + "_upload").modal("show");
+                    },
+                    /*同意确定*/
+                    "confirmInformation": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否同意", "/rest/storeBonuses/" + profile.id, {
+                            act: "confirmInformation",
+                            loanType: "ORDERCDD"
+                        });
+                    }
+                };
+
+
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 30;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    if (fileItem.file.type.indexOf("image") !== -1) {
+                        fileItem.actCode = $scope.actCode;
+
+                        fileItem.formData = [{fileType: "file"}];
+
+                        $("#audit_zip_file_input").val("");
+
+                    } else {
+                        $rootScope.toasterError("警告！", "只能上传图片格式请重新选择！");
+                        fileItem.remove();
+                    }
+                };
+                
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    //删除
+
+                    $http({
+                        method: "GET",
+
+                        url: "/rest/storeBonuses/"+$scope.profile_id+"/files"
+                    }).success(function (resResult) {
+                        console.log(resResult,'cba');
+
+                        $scope.filesLength = resResult._embedded.storeBonusFiles;
+                        $scope.pictureId = null;
+                        console.log($scope.filesLength,'aaa');
+                        if (fileItem.actCode === "uploadMaterials") {
+                            $scope.zipName = response.result.newFileName;
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/storeBonuses/" + $scope.profile_id,//这里是关联的实体
+                                data: {
+                                    fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                    act: fileItem.actCode//上传文件的行为
+                                }
+                            }).success(function (data) {
+
+                            });
+                        }
+                    });
+
+                };
+                $scope.uploader.onCompleteAll = function () {
+                    $("#" + $scope.profile_id + "_upload").modal("hide");
+
+                    $http({
+                        method: "PATCH",
+                        url: "/rest/storeBonuses/" + $scope.profile_id,//这里是关联的实体
+                        data: {
+                            act: "bonus",
+                            loanType: "ORDERCDD"
+                        }
+                    }).success(function (date) {
+                        $state.reload(true);
+                        $rootScope.toasterSuccess("成功", "放款成功");
+                    })
+                };
+//                        if ($scope.filesLength.length >0){
+//                            $scope.pictureId = resResult._embedded.storeBonusFiles[0].id;
+//
+//                            $http({
+//                                method: "DELETE",
+//
+//                                url: "/rest/storeBonusFiles/"+$scope.pictureId+"/log"
+//                            }).success(function (resResult) {
+//                                $http({
+//                                    method: "DELETE",
+//                                    url: "/rest/storeBonusFiles/"+$scope.pictureId
+//                                }).success(function (resResult) {
+//                                    $("#storeBonus_upload_one_photo").modal("hide");
+//
+//                                    if (fileItem.actCode === "uploadMaterials") {
+//                                        $scope.zipName = response.result.newFileName;
+//                                        $http({
+//                                            method: "PATCH",
+//                                            url: "/rest/storeBonuses/" + $scope.profile_id,//这里是关联的实体
+//                                            data: {
+//                                                fileObject: response.result,//fileObject是上传完文件后的文件对象
+//                                                act: fileItem.actCode//上传文件的行为
+//                                            }
+//                                        }).success(function (data) {
+//
+//                                            $("#" + $scope.profile_id + "_upload").modal("hide");
+//
+//                                            $http({
+//                                                method: "PATCH",
+//                                                url: "/rest/storeBonuses/" + $scope.profile_id,//这里是关联的实体
+//                                                data: {
+//                                                    act: "bonus",
+//                                                    loanType: "ORDERCDD"
+//                                                }
+//                                            }).success(function (date) {
+//                                                $state.reload(true);
+//                                                $rootScope.toasterSuccess("成功", "放款成功");
+//                                            })
+//
+
+
+//                                            $state.reload(true);
+//                                            $rootScope.toasterSuccess("成功", "放款成功");
+//                                            console.log($scope.profile_id)
+//                                            $("#" + $scope.profile_id + "_upload").modal("hide");
+//                                        });
+//                                    }
+//
+//                                });
+//                            });
+
+//                        }else{
+
+//                        }
+
+                /*
+               * 查看凭证
+               * */
+
+                $scope.pictureId = null;
+
+                $scope.uploadOnePhoto = function (id) {
+                    console.log(id,'123');
+                    $scope.pictureId = id;
+                    $scope.modalMaxPhoto = null;
+                    $http({
+                        method: "GET",
+                        url: "/rest/storeBonuses/"+id+"/files"
+                    }).success(function (res) {
+                        $scope.modalMaxPhoto = res._embedded.storeBonusFiles ;
+                        console.log(res._embedded.storeBonusFiles,'345')
+                        $("#storeBonus_upload_one_photo").modal("show");
+                    });
+                };
+
+                /*
+          * 删除图片
+          * */
+                $scope.photoChargeDelete = function (fee) {
+                    console.log($scope.pictureId,'pppppp')
+                    console.log(fee,'pppppp')
+                    if (fee) {
+                        $rootScope.sweetConfirm({
+                            title: "提示",
+                            text: "你是否要删除这张图片！",
+                            type: "warning",
+                            callback: function () {
+                                $http({
+                                    method: "GET",
+                                    url: "/rest/storeBonuses/" + $scope.pictureId + "/files"
+                                }).success(function (resResult) {
+                                    console.log(resResult,'aaaaaaaaaaaa')
+                                    angular.forEach(resResult._embedded.storeBonusFiles, function (val, key) {
+                                        if (val.newFileName == fee.newFileName) {
+                                            $http({
+                                                method: "DELETE",
+                                                url: "/rest/storeBonusFiles/"+fee.id+"/log"
+                                            }).success(function (resResult) {
+                                                console.log(resResult,'aaaaaaaaaaaa')
+                                                $http({
+                                                    method: "DELETE",
+                                                    url: "/rest/storeBonusFiles/"+fee.id
+                                                }).success(function (res) {
+                                                    $state.go("workflowEntity.list", {entity_key: "storeBonus"}, {reload: true});
+                                                    $("#storeBonus_upload_one_photo").modal("hide");
+                                                    $rootScope.toasterInfo("成功！", "删除成功");
+                                                })
+                                            });
+                                        }
+                                    })
+                                });
+
+                            }
+
+                        })
+                    }
+                };
+
+
+            }
+        ]
+    );
+</script>
+
+
+
+<div ng-controller="storeBonusListModuleController" class="h-full" ui-view></div>

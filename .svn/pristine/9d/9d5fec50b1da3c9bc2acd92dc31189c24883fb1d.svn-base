@@ -1,0 +1,57 @@
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                   逾期记录
+                </div>
+                <table ng-if="loanoverdues.length < 1" class="table table-hover b-light" >
+                    <tr>
+                        <td>
+                            暂无数据！
+                        </td>
+                    </tr>
+                </table>
+                <table ng-if="loanoverdues.length > 0" class="table table-hover b-light" style="border-bottom: none;table-layout: fixed;">
+                    <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>逾期发生时间</th>
+                        <th>逾期天数</th>
+                        <th>逾期金额(元)</th>
+                        <!--<th>逾期罚息率(%)</th>-->
+                        <th>状态</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="item in loanoverdues">
+                        <td class="v-middle">
+                            {{ item.id }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.createdAt |datetime }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.overdueDays }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.penalSum }}
+                        </td>
+                        <!--<td class="v-middle">-->
+                            <!--{{ item.punishinterestrule_rate }}-->
+                        <!--</td>-->
+                        <td class="v-middle">
+                            {{ item.status?'已结清':'逾期中' }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+            <!--<div class="m-t">记录...</div>-->
+        <!--</div>-->
+    </div>
+</div>

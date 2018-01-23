@@ -1,0 +1,66 @@
+package com.liyang.controller.domain;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.storeadvance.Storeadvance;
+import com.liyang.domain.storeadvance.StoreadvanceRepository;
+
+@RestController
+@RequestMapping("/storeadvance")
+public class StoreadvanceController {
+	@Resource
+	private StoreadvanceRepository repository;
+	
+	@RequestMapping("/search")
+    public EntityPage search(@RequestParam(required = false) Map<String, Object> params) throws TimeConditiosException {
+        GenericQueryExpSpecification<Storeadvance> queryExpression = new GenericQueryExpSpecification<Storeadvance>();
+        //状态
+        queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"), true));
+        //所属门店
+        queryExpression.add(QueryExpSpecificationBuilder.eq("department.id", params.get("department_id"), true));
+        Page<Storeadvance> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+        String[] fields = new String[]{"id", "label", "createdAt", "lastModifiedAt", "state", "loan", "payableAmount", "realAmount",
+                "type", "payTime","department"};
+        return convertCustom(EntityPageUtil.convert(page, fields));
+    }
+	
+	private EntityPage convertCustom(EntityPage page) {
+        List<Map<String, Object>> entities = page.getEntitys();
+        if (entities == null) {
+            return page;
+        }
+        for (Map<String, Object> map : entities) {
+            if (map == null) {
+                continue;
+            }
+
+            Object loan = map.get("loan");
+            map.remove("loan");
+            if (loan != null) {
+            	Loan obj = (Loan) loan;
+            	map.put("loanId", obj.getId());
+                map.put("loanSn", obj.getLoanSn());
+                
+                Ordercdd ordercdd = obj.getOrdercdd();
+                if (ordercdd != null) {
+					map.put("applyRealName", ordercdd.getRealName());
+					map.put("applyMobile", ordercdd.getApplyMobile());
+				}
+            }
+        }
+        return page;
+    }
+}

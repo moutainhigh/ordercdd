@@ -1,0 +1,230 @@
+<script>
+    "use strict";
+    app.controller("managerHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$state",
+            "$stateParams",
+            "entity",
+            function ($rootScope, $scope, $http, $state, $stateParams, entity) {
+
+                //获取实体id
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+                $scope.referralCode = [];
+                $scope.ralCodeLists = [];
+                $scope.ralCodes = [];
+                $scope.forms = {};
+                $scope.forms1 = {};
+
+                //初始化分页参数
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+                //初始化分页参数
+                $scope.pageList1 = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+
+                //获取实体详情
+                entity.getDetail("/rest/users/" + $scope.id, ["createdBy", "state", "createdByDepartment", "lastModifiedBy", "department", "role", "workflow"]).then(function (resResult) {
+
+                    $scope.profile = resResult;
+                    console.log($scope.profile,'$scope.profile')
+
+                    $scope.referralCode = $scope.profile.referralCode
+                    //对状态按钮进行分组
+                    angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                        if (val.actGroup === "UPDATE") {
+                            $scope.canActs.push(val);
+                        }
+                    });
+
+                    $scope.state_code = $scope.profile.state.stateCode;
+
+                    entity.getDetail($scope.profile.department._links.departmenttype.href, ["roles"]).then(function (typeResResult) {
+                        //获取部门类型的角色
+                        $scope.allRoles  = typeResResult.roles._embeddedItems;
+                        $scope.adoptRole = entity.getSelectedMyOwn($scope.allRoles, $scope.profile.role);
+                    });
+//                    推荐订单
+                    $scope.getList = function (page) {
+
+                        $scope.forms.page = page;
+                        if($scope.referralCode){
+
+                            $http.get("/ordercddDomain/search?referralCode="+$scope.referralCode+"&service_user_id="+$scope.id,
+                                {
+                                    params:$scope.forms
+                                }
+                            ).success(function (resResult) {
+
+                                $scope.ralCodes = resResult.entitys
+                                console.log(resResult,'referralCode')
+
+                                if ($scope.ralCodes.length > 0) {
+                                    $scope.pageList = {
+                                        size: resResult.size,
+                                        total_elements: resResult.totalElements,
+                                        current_page: resResult.number,
+                                        num_page: resResult.totalPages,
+                                        total_page: resResult.totalPages
+                                    };
+                                } else {
+                                    $scope.pageList = {
+                                        size: 0,
+                                        total_elements: 0,
+                                        current_page: 0,
+                                        num_page: 1,
+                                        total_page: 1
+                                    };
+                                }
+                                $rootScope.setPaginator("#ralCodes_list_paginator", $scope.pageList, $scope.getList);
+
+                            });
+                        }
+                    };
+                    $scope.getList(0);
+
+                    //  跟踪订单
+                    $scope.getOrderList = function (page) {
+                        $scope.forms1.page = page;
+                        $http.get("/ordercddDomain/search?service_user_id="+$scope.id,
+                            {
+                                params:$scope.forms1
+                            }
+                        ).success(function(res) {
+
+                            $scope.ralCodeLists = res.entitys
+                            console.log(res,'00000000000000000000')
+
+                            if ($scope.ralCodeLists.length > 0) {
+                                $scope.pageList1 = {
+                                    size: res.size,
+                                    total_elements: res.totalElements,
+                                    current_page: res.number,
+                                    num_page: res.totalPages,
+                                    total_page: res.totalPages
+                                };
+                            } else {
+                                $scope.pageList1 = {
+                                    size: 0,
+                                    total_elements: 0,
+                                    current_page: 0,
+                                    num_page: 1,
+                                    total_page: 1
+                                };
+                            }
+                            $rootScope.setPaginator("#ralCodeLists_list_paginator", $scope.pageList1, $scope.getOrderList);
+
+                        });
+                    };
+                    $scope.getOrderList(0);
+
+                });
+
+
+
+
+
+//                $http({
+//                    method: "GET",
+//                    url: "/ordercddDomain/search"
+//                }).success(function (resResult) {
+//                    $scope.ralCodeLists = resResult.entitys
+//                })
+
+
+
+                /*
+                 * 用户所有操作的方法集合，其中每一个方法对应实体的一个行为，也有自定义方法
+                 * @author  李斌
+                 * */
+                $scope.managerExcute = {
+                    "patch": function (options) {
+                        swal({
+                            title: options.title,
+                            type: options.type,
+                            text: options.text,
+                            showCancelButton: true,
+                            cancelButtonText: "退出",
+                            confirmButtonText: "同意",
+                            closeOnConfirm: true
+                        }, function () {
+                            $http({
+                                method: "PATCH",
+                                url: options.url,
+                                data: options.data
+                            }).success(function (resResult) {
+
+                                if (options.modal) {
+                                    $("#" + options.modal + "_manager_modal").modal("hide");
+                                }
+
+                                $rootScope.toasterSuccess("成功！", "操作成功！");
+
+                                $state.go("workflowEntity.list", {
+                                    entity_key: "manager",
+                                    workflow_id: $scope.profile.workflow.id
+                                }, {reload: true});
+
+                            });
+                        });
+                    },
+                    "adopt": function () {
+                        $("#adopt_user_modal").modal("show");
+                    },
+                    "roleSelectedSave": function () {
+                        if ($scope.adoptRole !== null) {
+                            $scope.userExcute.patch({
+                                title: "请确认！",
+                                text: "确定给该用户分配" + $scope.adoptRole.label + "角色嘛？",
+                                type: "warning",
+                                modal: "adopt",
+                                url: $scope.profile._links.self.href,
+                                data: {
+                                    act: "adopt",
+                                    role: $scope.adoptRole._links.self.href
+                                }
+                            })
+                        }
+                    },
+                    "selectRole": function (role) {
+                        //自定义的方法在实体行为不存在这个
+                        $scope.adoptRole = role;
+                    },
+                    "update": function () {
+                        $state.go("workflowEntity.home.profile.form", {
+                            id: $scope.id,
+                            entity_key: "manager"
+                        }, {reload: false});
+                    }
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="managerHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

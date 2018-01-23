@@ -1,0 +1,50 @@
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    异常催收详情
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">借款单号：</td>
+                        <td class="v-middle w-xl">{{ profile.loanSn }}</td>
+                        <td class="v-middle text-right w-sm">客户名称:</td>
+                        <td class="v-middle w-xl">{{ profile.debtorName }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">联系方式：</td>
+                        <td class="v-middle w-xl">{{ profile.debtorMobile }}</td>
+                        <td class="v-middle text-right w-sm">服务门店:</td>
+                        <td class="v-middle w-xl">{{ profile.department_label }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">放款状态：</td>
+                        <td class="v-middle w-xl">{{ profile.state.label }}</td>
+                        <td class="v-middle text-right w-sm">客户剩余应还金额：</td>
+                        <td class="v-middle w-xl">{{ profile.debtorLeftAmount }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">客户已还金额：</td>
+                        <td class="v-middle w-xl">{{profile.debtorRepayAmount}}</td>
+                        <td class="v-middle text-right w-sm">结清时间：</td>
+                        <td class="v-middle w-xl">{{ profile.finishAt | datetime }}</td>
+
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">异常催收原因：</td>
+                        <td class="v-middle w-xl" colspan="3">{{ profile.exceptionRemark }}</td>
+
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">转正常原因：</td>
+                        <td class="v-middle w-xl" colspan="3">{{ profile.handleRemark }}</td>
+
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

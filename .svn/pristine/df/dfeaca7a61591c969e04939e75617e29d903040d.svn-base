@@ -1,0 +1,653 @@
+<script>
+    "use strict";
+    app.controller("creditrepaymentListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, entity) {
+
+                $scope.states = [];
+
+                /*搜索值的对象*/
+                $scope.searchForms = {};
+
+                $scope.forms = {};
+
+                /*初始值*/
+                $scope.forms.state_id = $scope.state_id;
+                $scope.forms.size     = "10";
+                $scope.forms.sort     = "id,desc";
+
+                entity.getList("/rest/creditrepaymentWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+
+                        if (window.sessionStorage.getItem(window.myinfo.id + "creditrepayment_state_code")) {
+                            angular.forEach($scope.states, function (val, key) {
+                                if (val.id == window.sessionStorage.getItem(window.myinfo.id + "creditrepayment_state_code")) {
+                                    $scope.stateVal       = $scope.states[key];
+                                    $scope.forms.state_id = val.id;
+                                    $scope.state_id       = val.id;
+                                    $scope.getList(0);
+                                }
+                            })
+                        } else {
+                            $scope.forms.state_id = null;
+                            $scope.getList(0);
+                        }
+
+
+//                        $scope.state_code = $scope.states[0].stateCode;
+//                        $scope.getList(0);
+                    }
+                });
+
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    $scope.forms.page = page;
+
+
+                    $http.get("/creditrepayment/search", {
+                        params: $scope.forms
+                    }).success(function (resResult) {
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult.entitys);
+
+                        console.log($scope.list,'$scope.list')
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.size,
+                                total_elements: resResult.totalElements,
+                                current_page: resResult.number,
+                                num_page: resResult.totalPages,
+                                total_page: resResult.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#creditrepayment_list_paginator", $scope.pageList, $scope.getList);
+                    });
+                };
+
+
+                //状态
+                $scope.stateChange = function (val) {
+                    $scope.forms      = {};
+                    $scope.forms.size = "10";
+                    $scope.forms.sort = "id,desc";
+                    if (val) {
+                        window.sessionStorage.setItem(window.myinfo.id + "creditrepayment_state_code", val.id);
+
+                        $scope.state_id = val.id;
+
+                        $scope.forms.state_id = val.id;
+                        // $scope.searchSubmit();
+                    } else {
+                        window.sessionStorage.setItem(window.myinfo.id + "creditrepayment_state_code", "");
+
+                        $scope.state_id       = null;
+                        $scope.forms.state_id = null;
+                        // $scope.searchSubmit();
+                    }
+                };
+
+                //                搜索
+                $scope.searchSubmit = function () {
+
+                    if($scope.searchForms.startDate){
+                        $scope.searchForms.timeRangeKey = "debtorActualRepaymentDate";
+                    }
+
+                    if($scope.searchForms.endDate){
+                        $scope.searchForms.timeRangeKey = "debtorActualRepaymentDate";
+                    }
+
+                    /*合并对象*/
+                    $scope.forms = Object.assign($scope.searchForms, $scope.forms);
+
+                    $scope.getList(0);
+
+                };
+
+                //清除搜索
+                $scope.clearSearch = function () {
+                    $scope.forms       = {};
+                    $scope.searchForms = {};
+
+                    if ($scope.state_id) {
+                        $scope.forms.state_id = $scope.state_id;
+                    } else {
+                        $scope.forms.state_id = null;
+                    }
+
+                    $scope.forms.size = "10";
+                    $scope.forms.sort = "id,desc";
+                    $scope.getList(0);
+                };
+
+                $scope.startDateToday = function () {
+                    $scope.searchForms.startDate = new Date();
+                };
+
+                $scope.startDateClear = function () {
+                    $scope.searchForms.startDate = null;
+                };
+
+                $scope.endDateToday = function () {
+                    $scope.searchForms.endDate = new Date();
+                };
+
+                $scope.endDateClear = function () {
+                    $scope.searchForms.endDate = null;
+                };
+
+                $scope.openStart = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.startOpened = true;
+                    $scope.endOpened   = false;
+                };
+
+                $scope.openEnd = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.startOpened = false;
+                    $scope.endOpened   = true;
+                };
+
+                $scope.dateOptions = {
+                    formatYear: "yy",
+                    startingDay: 1,
+                    class: "datepicker",
+                    showWeeks:false
+                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="creditrepaymentListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <form class="form-inline">
+                    <div class="clearfix">
+                        <div class="form-group m-r">
+                            <label for="creditrepayment_isLoan">是否确认：</label>
+                            <select ng-model="stateVal"
+                                    id="creditrepayment_isLoan"
+                                    class="form-control input-sm" style="width:150px;"
+                                    ng-options="y.label for (x,y) in states"
+                                    ng-change="stateChange(stateVal)"
+                            >
+                                <option value="">全部</option>
+                            </select>
+
+                        </div>
+                        <div class="form-group">
+                            <label>还款时间：</label>
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control input-sm" style="width:150px;"
+                                       placeholder="开始时间"
+                                       disabled
+                                       datepicker-popup="yyyy-MM-dd"
+                                       ng-model="searchForms.startDate"
+                                       is-open="startOpened"
+                                       datepicker-options="dateOptions"
+                                       current-text="今天"
+                                       clear-text="清除"
+                                       close-text="关闭"/>
+                                <span class="input-group-btn">
+                                <button type="button" class="btn btn-sm btn-default" ng-click="openStart($event)">
+                                    <i class="fa fa-calendar"></i>
+                                </button>
+                            </span>
+                            </div>
+                            <span>-</span>
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control input-sm" style="width:150px;"
+                                       placeholder="结束时间"
+                                       disabled
+                                       datepicker-popup="yyyy-MM-dd"
+                                       ng-model="searchForms.endDate"
+                                       is-open="endOpened"
+                                       datepicker-options="dateOptions"
+                                       current-text="今天"
+                                       clear-text="清除"
+                                       close-text="关闭"/>
+                                <span class="input-group-btn">
+                                <button type="button" class="btn btn-sm btn-default" ng-click="openEnd($event)">
+                                    <i class="fa fa-calendar"></i>
+                                </button>
+                            </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <div class="form-group m-r">
+                            <label for="creditrepayment_debtorName">客户姓名：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="creditrepayment_debtorName"
+                                   ng-model="searchForms.debtorName">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="creditrepayment_debtorMobile">联系方式：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="creditrepayment_debtorMobile"
+                                   ng-model="searchForms.debtorMobile">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="creditrepayment_departmentLabel">服务门店：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="creditrepayment_departmentLabel"
+                                   ng-model="searchForms.department_label">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="creditrepayment_loanSn">借款单号：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="creditrepayment_loanSn"
+                                   ng-model="searchForms.loanSn">
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <button class="btn btn-sm btn-primary m-r m-t" ng-click="searchSubmit()">
+                            <i class="fa fa-search"></i>
+                            查询
+                        </button>
+                        <button class="btn btn-sm btn-default m-r m-t" ng-click="clearSearch()">
+                            <i class="fa fa-refresh"></i>
+                            清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light ">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>流水号</th>
+                                            <th>订单号</th>
+                                            <th>借款单号</th>
+                                            <!--<th>还款计划单号</th>-->
+                                            <th>姓名</th>
+                                            <th>联系方式</th>
+                                            <th>服务门店</th>
+                                            <th>还款时间</th>
+                                            <th>还款金额(元)</th>
+                                            <th>实际到账金额(元)</th>
+                                            <th>状态</th>
+                                            <th>还款方式</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle">
+                                                <div class="btn-group" >
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            ng-disabled="item.listActs.length < 1"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <!--<li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>-->
+                                                        <!--</li>-->
+                                                        <li ng-repeat="act in item.listActs track by $index"
+                                                            ng-click="creditrepaymentExcute[act.actCode](item)"
+                                                            ng-hide="act.actCode=='once'">
+                                                            <!--ng-hide="item.repaymentType==2&&act.actCode=='confirm'">-->
+                                                            <a>{{act.label}}</a>
+                                                        </li>
+                                                        <li ng-click="creditrepaymentExcute['confirm'](item)"
+                                                            ng-show="item.repaymentType==2">
+                                                            <a>提前还清</a>
+                                                        </li>
+                                                        <li ng-click="uploadOnePhoto(item.id)">
+                                                            <a>查看凭证</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.mentSn }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.orderSn }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.loanSn }}
+                                            </td>
+                                            <!--<td class="v-middle">-->
+                                            <!--{{ item.planSn }}-->
+                                            <!--</td>-->
+                                            <td class="v-middle list-hover-a">
+                                                <a ui-sref="workflowEntity.home.profile.info({id:item.person_id,entity_key:'person'})">
+
+                                                    {{ item.debtorName }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                {{ item.debtorMobile }}
+                                            </td>
+                                            <td>
+                                                {{ item.service_department }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.debtorActualRepaymentDate | datetime}}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.fees?item.fees.toFixed(2):"" }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.realAmount?item.realAmount.toFixed(2):"未到账" }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.state_label }}
+                                                <!--确认到账 / 提前还清-->
+                                                <div class="modal fade" id="{{ item.id }}_creditrepayment_confirm_modal">
+                                                    <div class="modal-lg modal-dialog" style="width:400px;">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal">
+                                                                    <span>×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写到账金额</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group m-r m-t">
+                                                                    <label for="{{item.id}}_fees" style="width:100%;float:left;line-height:34px;text-align:left;">还款金额：</label>
+                                                                    <input type="text" class="form-control" id="{{item.id}}_fees"
+                                                                           readonly
+                                                                           ng-model="item.fees">
+                                                                </div>
+                                                                <div class="form-group m-r m-t">
+                                                                    <label for="{{ item.id }}_realAmount" style="width:100%;float:left;line-height:34px;text-align:left;">实际到账金额：</label>
+                                                                    <input type="text" class="form-control" id="{{ item.id }}_realAmount"
+                                                                           ng-model="realAmount">
+                                                                    <!--<span id="{{item.id}}_realAmount_i" style="color:red;display:none;float:left;margin-top:5px;">实际到账金额不能为空</span>-->
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button class="btn btn-primary" ng-click="creditrepaymentExcute['confirmSave'](item)">{{item.repaymentType==2?'提前还清':'确认到账'}}</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!--上传凭证-->
+                                                <div class="modal fade" id="{{ item.id }}_upload">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" ng-click="uploader.clearQueue();setUploadDone();"
+                                                                        data-dismiss="modal">
+                                                                    <span>&times;</span>
+                                                                </button>
+                                                                <!--上传审核通过的文件-->
+                                                                {{ headerInformation }}
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="hbox hbox-auto-xs hbox-auto-sm" nv-file-drop="" uploader="uploader"
+                                                                     filters="queueLimit, customFilter">
+                                                                    <div class="col w-lg bg-light b-r bg-auto">
+                                                                        <div class="wrapper-md dker b-b">
+                                                                            <h4 class="m-n font-thin">选择文件</h4>
+                                                                        </div>
+                                                                        <div class="wrapper-md">
+                                                                            <div ng-show="uploader.isHTML5" class="m-b-md">
+                                                                                <!-- 3. nv-file-over uploader="link" over-class="className" -->
+                                                                                <div class="b-a b-2x b-dashed wrapper-lg bg-white text-center m-b"
+                                                                                     nv-file-over="" over-class="b-info" uploader="uploader">
+                                                                                    拖动文件放到此处
+                                                                                </div>
+                                                                            </div>
+                                                                            <input id="audit_zip_file_input" class="w" type="file" nv-file-select=""
+                                                                                   uploader="uploader"/>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col bg-light bg-auto">
+                                                                        <div class="wrapper-md bg-light dk b-b">
+                                                                            <span class="pull-right">文件数：
+                                                                                <b class="badge bg-info">{{ uploader.queue.length }}</b>
+                                                                            </span>
+                                                                            <h4 class="m-n font-thin text-danger ">{{promptInformation}}</h4>
+                                                                        </div>
+                                                                        <div class="wrapper-md">
+                                                                            <table class="table bg-white-only b-a">
+                                                                                <thead>
+                                                                                <tr>
+                                                                                    <th>文件名</th>
+                                                                                    <th ng-show="uploader.isHTML5">大小</th>
+                                                                                    <th>状态</th>
+                                                                                    <th>操作</th>
+                                                                                </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                <tr ng-repeat="item in uploader.queue">
+                                                                                    <td>
+                                                                                        <div class="text-ellipsis w-sm">{{ item.file.name }}</div>
+                                                                                    </td>
+                                                                                    <td ng-show="uploader.isHTML5" nowrap>{{ item.file.size/1024/1024|number:2
+                                                                                        }} MB
+                                                                                    </td>
+                                                                                    <td class="text-center">
+                                                                                        <span ng-show="item.isSuccess" class="text-success">
+                                                                                            <i class="fa fa-check"></i>
+                                                                                        </span>
+                                                                                        <span ng-show="item.isCancel" class="text-warning">
+                                                                                            <i class="fa fa-ban"></i>
+                                                                                        </span>
+                                                                                        <span ng-show="item.isError" class="text-danger">
+                                                                                            <i class="fa fa-cancel"></i>
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td nowrap>
+                                                                                        <button type="button" class="btn btn-default btn-xs"
+                                                                                                ng-click="item.upload()"
+                                                                                                ng-disabled="item.isReady || item.isUploading || item.isSuccess">
+                                                                                            上传
+                                                                                        </button>
+                                                                                        <button type="button" class="btn btn-default btn-xs" ng-disabled="item.isReady || item.isUploading || item.isSuccess"
+                                                                                                ng-click="item.remove();setUploadDone();">
+                                                                                            清除
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                                </tbody>
+                                                                            </table>
+                                                                            <div>
+                                                                                <div>
+                                                                                    <p>进度</p>
+                                                                                    <div class="progress bg-light dker" style="">
+                                                                                        <div class="progress-bar progress-bar-striped bg-info"
+                                                                                             role="progressbar"
+                                                                                             ng-style="{ 'width': uploader.progress + '%' }"></div>
+                                                                                    </div>
+                                                                                    <div class="m-t m-b font-bold h4 text-danger"
+                                                                                         ng-if="uploader.progress === 100 && !uploadDone">服务器正在处理中，请稍等。。。
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button type="button" class="btn btn-addon btn-success"
+                                                                                        ng-click="uploader.uploadAll()"
+                                                                                        ng-disabled="!uploader.getNotUploadedItems().length">
+                                                                                    <i class="fa fa-arrow-circle-o-up"></i> 上传
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!--查看凭证-->
+                                                <div class="modal fade" id="capitalpayment_upload_one_photo" tabindex="-1" role="dialog">
+                                                    <div class="modal-lg modal-dialog" role="document" style="width: 900px">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">查看图片</h4>
+                                                            </div>
+                                                            <p class="m-b m-t" style="width:49%;display:inline-block;text-align:center;">客户凭证</p>
+                                                            <p class="m-b m-t" style="width:49%;display:inline-block;text-align:center;">财务凭证</p>
+                                                            <div class="modal-body" style="text-align: center">
+                                                                <div class="modal-left" style="width:49%;text-align:center;display:inline-block;">
+                                                                    <img ng-src="http://files.xiaojinpingtai.com/{{ customerImg.newFileName }}"
+                                                                         style="max-width: 400px;"
+                                                                         alt="">
+                                                                    <p class="img-title" ng-show="customerImg.newFileName == null"
+                                                                       style="width:100%;text-align: center;"
+                                                                    >客户凭证未上传</p>
+                                                                </div>
+                                                                <div class="modal-right" style="width:49%;text-align:center;display:inline-block;">
+                                                                    <img ng-src="http://files.xiaojinpingtai.com/{{ financeImg.newFileName }}"
+                                                                         style="max-width: 400px;"
+                                                                         ng-show="financeImg.newFileName!=null"
+                                                                         alt="">
+                                                                    <p class="img-title" ng-show="financeImg.newFileName == null"
+                                                                       style="width:100%;text-align: center;"
+                                                                    >财务凭证未上传</p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <!--<button type="button" class="btn btn-danger"-->
+                                                                <!--ng-click="photoChargeDelete(modalMaxPhoto,item)">-->
+                                                                <!--删除-->
+                                                                <!--</button>-->
+                                                                <button type="button" class="btn btn-primary"
+                                                                        data-dismiss="modal" aria-label="Close">
+                                                                    <span aria-hidden="true">退出</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!--查看，添加备注-->
+                                                <div class="modal fade" id="{{ item.id }}_note" role="dialog">
+                                                    <div class="modal-lg modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">备注</h4>
+                                                            </div>
+
+                                                            <div class="modal-body" style="text-align: center;">
+                                                                <div class="note-content">
+                                                                    <ul>
+                                                                        <li class="m-b" ng-repeat="itemChild in label track by $index">
+                                                                            <p style="text-align: left;">
+                                                                                <span style="width:150px;display:inline-block;text-align: left;">{{ itemChild.lastModifiedAt }}</span>
+                                                                                <span>{{ itemChild.lastModifiedBy }}</span>
+                                                                            </p>
+                                                                            <p style="text-align: left;">{{ itemChild.label }}</p>
+                                                                        </li>
+                                                                        <!--<p class="m-b" ng-if="label.length==0" style="text-align: center;">暂无备注</p>-->
+                                                                    </ul>
+                                                                </div>
+                                                                <textarea name="note" id="{{item.id}}_label" placeholder="请输入备注" maxlength="100"
+                                                                          style="width:800px;height:100px;text-indent:10px;">{{ item.label }}</textarea>
+                                                            </div>
+
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-primary"
+                                                                        data-dismiss="modal" aria-label="Close">
+                                                                    <span aria-hidden="true">取消</span>
+                                                                </button>
+                                                                <button type="button" class="btn btn-primary" ng-click="creditrepaymentExcute['addRemark'](item)">
+                                                                    <span>确定</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td ng-show="item.repaymentType==0">普通还款</td>
+                                            <td ng-show="item.repaymentType==1">门店代还</td>
+                                            <td ng-show="item.repaymentType==2">提前还清</td>
+                                            <td ng-show="item.repaymentType==3">门店代付还清</td>
+                                            <td ng-show="item.repaymentType==4">催收代还款</td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="creditrepayment_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }} 条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

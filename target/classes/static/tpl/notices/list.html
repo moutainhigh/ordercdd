@@ -1,0 +1,185 @@
+<script>
+    app.controller("noticeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$state",
+            "$filter",
+            "entity",
+            function ($rootScope, $scope, $http, $state, $filter, entity) {
+
+                $rootScope.noticeForms = {};
+                /*搜索值的对象*/
+                $rootScope.noticeSearchForms = {};
+
+                $rootScope.noticeForms.size = "10";
+                $rootScope.noticeForms.sort = "id,desc";
+
+                $rootScope.getNoticeList(0);
+
+                $scope.startDateToday = function () {
+                    $scope.noticeSearchForms.startDate = new Date();
+                };
+
+                $scope.startDateClear = function () {
+                    $scope.noticeSearchForms.startDate = null;
+                };
+
+                $scope.endDateToday = function () {
+                    $scope.noticeSearchForms.endDate = new Date();
+                };
+
+                $scope.endDateClear = function () {
+                    $scope.noticeSearchForms.endDate = null;
+                };
+
+                $scope.openStart = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.startOpened = true;
+                    $scope.endOpened   = false;
+                };
+
+                $scope.openEnd = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.startOpened = false;
+                    $scope.endOpened   = true;
+                };
+
+                $scope.dateOptions = {
+                    formatYear: "yy",
+                    startingDay: 1,
+                    class: "datepicker",
+                    showWeeks: false
+                };
+            }
+        ]
+    );
+</script>
+<div class="hbox hbox-auto-xs bg-light" ng-controller="noticeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <form class="form-inline">
+                    <div class="clearfix">
+                        <div class="form-group m-r">
+                            <label for="notice_isRead"
+                                   style="width:70px;text-align:right;">读取状态：</label>
+                            <select ng-model="noticeForms.isRead"
+                                    class="form-control input-sm" style="width:150px;"
+                                    id="notice_isRead">
+                                <option value="" selected>全部</option>
+                                <option value="false">未读</option>
+                                <option value="true">已读</option>
+                            </select>
+                        </div>
+                        <div class="form-group m-r">
+                            <label>消息时间：</label>
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control input-sm" style="width:150px;"
+                                       placeholder="开始时间"
+                                       disabled
+                                       datepicker-popup="yyyy-MM-dd"
+                                       ng-model="noticeSearchForms.startDate"
+                                       is-open="startOpened"
+                                       datepicker-options="dateOptions"
+                                       current-text="今天"
+                                       clear-text="清除"
+                                       close-text="关闭"/>
+                                <span class="input-group-btn">
+                                    <button type="button" class="btn btn-sm btn-default"
+                                            ng-click="openStart($event)">
+                                        <i class="fa fa-calendar"></i>
+                                    </button>
+                                </span>
+                            </div>
+                            <span>-</span>
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control input-sm" style="width:150px;"
+                                       placeholder="结束时间"
+                                       disabled
+                                       datepicker-popup="yyyy-MM-dd"
+                                       ng-model="noticeSearchForms.endDate"
+                                       is-open="endOpened"
+                                       datepicker-options="dateOptions"
+                                       current-text="今天"
+                                       clear-text="清除"
+                                       close-text="关闭"/>
+                                <span class="input-group-btn">
+                                    <button type="button" class="btn btn-sm btn-default" ng-click="openEnd($event)">
+                                        <i class="fa fa-calendar"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <button class="btn btn-sm btn-primary m-r" ng-click="noticeSearchSubmit()">
+                            <i class="fa fa-search"></i>
+                            查询
+                        </button>
+                        <button class="btn btn-sm btn-default m-r" ng-click="noticeClearSearch()">
+                            <i class="fa fa-refresh"></i>
+                            清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="m-b b-l m-l-md streamline" ng-if="noticeList.length > 0">
+                                <div ng-repeat="item in noticeList">
+                                    <a class="pull-left thumb-sm avatar m-l-n-md">
+                                        <img src="img/megaphone.png" class="img-circle">
+                                    </a>
+                                    <div class="m-l-lg panel b-a">
+                                        <div class="panel-heading pos-rlt b-b b-light">
+                                            <span class="arrow left"></span>
+                                            <label class="label bg-info" ng-if="item.read">已读</label>
+                                            <label class="label bg-danger" ng-if="!item.read">未读</label>
+                                            <a class="btn btn-default btn-xs v-middle" ng-if="!item.read" ng-click="readNotice(item.id,true,true);">
+                                                <i class="fa fa-eye text-danger"></i>
+                                                标记为已读
+                                            </a>
+                                            <a class="btn btn-default btn-xs v-middle" ng-if="item.read" ng-click="readNotice(item.id,false,true);">
+                                                <i class="fa fa-eye-slash text-info"></i>
+                                                标记为未读
+                                            </a>
+                                            <a class="btn btn-default btn-xs v-middle" ng-click="toNoticeDetail(item.id,item.noticeInfo.content);">
+                                                <i class="fa fa-tag text-primary"></i>
+                                                消息详情
+                                            </a>
+                                            <span class="text-muted m-l-sm inline" style="height: 22px;line-height: 22px;">
+                                                <i class="fa fa-clock-o"></i>
+                                                {{(item.noticeInfo.createdAt)/1000 | datetime }}
+                                            </span>
+                                        </div>
+                                        <div class="panel-body">
+                                            <div ng-bind-html="item.noticeInfo.content | formatNoticeTextEnter"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="notice_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ noticePageList.total_elements }}
+                    条，本页共 {{ noticeList.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>

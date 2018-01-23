@@ -1,0 +1,233 @@
+<script>
+    app.controller("baddebtHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                $scope.logList    = [];
+                $scope.getProfile = function () {
+
+                    entity.getDetail("/rest/baddebts/" + $scope.id, ["createdBy", "state", "loan", "department"]).then(function (resResult) {
+
+                        $scope.profile = resResult;
+
+
+                        angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                            if (val.actGroup === "UPDATE" || val.actGroup === "OPERATE" || val.actGroup === "FILE_PACKAGE" || val.actGroup === "LIST_OPERATE") {
+                                $scope.canActs.push(val);
+                            } else if (val.actGroup === "FILE_OPERATE") {
+                                $scope.canFileActs.push(val)
+                            }
+                        });
+
+                        $scope.state_code = $scope.profile.state.stateCode;
+
+                        $http({
+                            method: "GET",
+                            url: "/baddebt/logList?id=" + $scope.profile.id
+                        }).success(function (resResult) {
+                            $scope.logList = resResult;
+
+                            $scope.logList = $scope.logList.sort(function (a, b) {
+                                return b.id - a.id ;
+                            });
+                        });
+
+                    });
+                };
+
+                $scope.getProfile();
+
+//                /*patch方法*/
+//                $scope.patchAct = function (type, title, url, data) {
+//                    swal({
+//                        title: title,
+//                        type: type,
+//                        showCancelButton: true,
+//                        cancelButtonText: "退出",
+//                        confirmButtonText: "同意",
+//                        closeOnConfirm: true
+//                    }, function () {
+//                        $http({
+//                            method: "PATCH",
+//                            url: url,
+//                            data: data
+//                        }).success(function (resResult) {
+//
+//                            $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+//
+//                        });
+//                    });
+//                };
+
+//
+//                /*大方法的对象*/
+//                $scope.baddebtExcute = {
+//
+//                    /*关闭*/
+//                    "disable": function () {
+//                        $scope.patchAct("error", "这条客户信息是否关闭", "/rest/baddebts/" + $scope.id, {act: "disable"});
+//                    },
+//
+//                    "downloadFile": function () {
+//
+//
+//                        console.log($scope.ordercddId);
+//                        swal({
+//                            title: "是否下载所有图片",
+//                            type: "warning",
+//                            showCancelButton: true,
+//                            cancelButtonText: "退出",
+//                            confirmButtonText: "同意",
+//                            closeOnConfirm: true
+//                        }, function () {
+//                            html = '<div style="position: fixed;top: 50%;right: 50%" class="sk-spinner sk-spinner-cube-grid" id="loadAction">' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '</div>';
+//                            $("body").append(html);
+//
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/ordercdds/" + $scope.ordercddId,
+//                                data: {act: "downloadFile"}
+//                            }).success(function (resResult) {
+//
+//                                $("#loadAction").remove();
+//                                if (resResult.filePackage) {
+//                                    $("#loadAction").remove();
+//                                    var form = $("<form>");//定义一个form表单
+//                                    form.attr("style", "display:none");
+//                                    form.attr("target", "");
+//                                    form.attr("method", "get");
+//                                    form.attr("action", "http://files.xiaojinpingtai.com/" + resResult.filePackage.newFileName);
+//
+//                                    $("body").append(form);//将表单放置在web中
+//                                    form.submit();
+//                                } else {
+//                                    $("#loadAction").remove();
+//                                    $rootScope.toasterWarning("注意", "该用户没有上传任何的图片！");
+//                                }
+//                            });
+//                        });
+//                    },
+//
+//                    /*提交资料*/
+//                    "application": function () {
+//                        $scope.patchAct("success", "这条客户信息是否提交", "/rest/baddebts/" + $scope.id, {act: "application"});
+//                    },
+//
+//
+//                    /*贷款提交*/
+//                    "loanApplication": function () {
+//                        $scope.patchAct("success", "这条客户贷款信息是否提交", "/rest/baddebts/" + $scope.id, {act: "loanApplication"});
+//                    },
+//
+//                    /*贷款通过*/
+//                    "loanAdopt": function () {
+//                        $scope.patchAct("success", "这条客户贷款信息是否提交", "/rest/baddebts/" + $scope.id, {act: "loanAdopt"});
+//                    },
+//
+//
+//                    /*匹配销售产品*/
+//                    "matching": function () {
+//                        $("#" + $scope.profile.id + "_matching").modal("show");
+//                    },
+//
+//                    /*匹配销售产品保存*/
+//                    "matchingSave": function (val) {
+//                        if (val) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/baddebts/" + $scope.id,
+//                                data: {
+//                                    act: "matching",
+//                                    product: val._links.product.href
+//                                }
+//                            }).success(function (resResult) {
+//
+//                                $http({
+//                                    method: "PATCH",
+//                                    url: "/rest/ordercdds/" + $scope.ordercddId,
+//                                    data: {
+//                                        product: val._links.product.href
+//                                    }
+//                                });
+//
+//                                $("#" + $scope.profile.id + "_matching").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+//                            });
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请选择一个销售产品！");
+//                        }
+//
+//                    },
+//
+//                    /*驳回打开modal*/
+//                    "loanFailed": function () {
+//                        $("#" + $scope.profile.id + "_failed").modal("show");
+//                    },
+//                    /*驳回理由加改变状态*/
+//                    "loanFailedSave": function (failedVal) {
+//                        if (failedVal) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/baddebts/" + $scope.id,
+//                                data: {
+//                                    act: "loanFailed",
+//                                    comment: failedVal
+//                                }
+//                            }).success(function (resResult) {
+//                                $("#" + $scope.profile.id + "_failed").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+//                            });
+//
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+//                        }
+//                    },
+//
+//                    /*同意 同时并向客户发合同*/
+//                    "adopt": function () {
+////                        $("#" + $scope.profile.id + "_upload").modal("show");
+//                        $scope.patchAct("success", "这条客户信息是否能通过", "/rest/baddebts/" + $scope.id, {act: "adopt"});
+//                    },
+//
+//                    "update": function () {
+//                        $state.go("workflowEntity.home.profile.form", {
+//                            id: $scope.id,
+//                            entity_key: "baddebt"
+//                        }, {reload: false});
+//                    }
+//                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="baddebtHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

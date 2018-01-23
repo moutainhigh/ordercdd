@@ -1,0 +1,10 @@
+package com.liyang.domain.product;
+
+import com.jpa.query.expression.generic.SpecificationQueryRepository;
+import com.liyang.domain.base.WorkflowEntityRepository;
+
+//@RepositoryRestResource(excerptProjection = UserProjection.class)
+public interface ProductRepository extends WorkflowEntityRepository<Product>,SpecificationQueryRepository<Product> {
+
+    Product findFirstByLabel(String label);
+}

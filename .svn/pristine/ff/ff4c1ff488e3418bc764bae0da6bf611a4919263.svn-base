@@ -1,0 +1,1247 @@
+<script>
+    "use strict";
+    app.controller("ordercddListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "$interval",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, $interval) {
+
+                $scope.myInfo = window.myinfo;
+                $scope.states = [];
+
+                $scope.forms = {};
+
+                $scope.form = {};
+
+                /*搜索值的对象*/
+                $scope.searchForms = {};
+
+                $scope.msgTimeOver = false;
+
+                /*初始值*/
+//                $scope.forms.state_id = $scope.state_id;
+                $scope.forms.size = "10";
+                $scope.forms.sort = "lastModifiedAt,desc";
+
+                // $scope.regions = angular.copy(window.regions);
+
+                //默认为第一个
+                // $scope.province  = $scope.regions.children[0];
+                // $scope.cities    = $scope.province.children;
+                // $scope.city      = $scope.province.children[0];
+                // $scope.districts = $scope.city.children;
+                // $scope.district  = $scope.city.children[0];
+
+
+                //默认第一个地区门店查找
+                // $http({
+                //     method: "GET",
+                //     url: "rest/departments/search/findByProvinceAndCityAndDistrict?province=" + $scope.province.text + "&city=" + $scope.city.text + "&district=" + $scope.district.text
+                // }).success(function (resResult) {
+                //
+                //     if (resResult._embedded.departments.length > 0) {
+                //         $scope.departmentsOptions = resResult._embedded.departments
+                //
+                //     } else {
+                //         $scope.departmentsOptions = [{id: null, label: "该地区没有匹配的门店"}]
+                //
+                //     }
+                //
+                // });
+
+                // $scope.selectChane = function () {
+                //
+                //     var province = $scope.province.text;
+                //     if ($scope.city) {
+                //         var city = $scope.city.text
+                //     } else {
+                //         var city = $scope.city
+                //     }
+                //     if ($scope.district) {
+                //         var district = $scope.district.text
+                //     } else {
+                //         var district = $scope.district
+                //     }
+                //
+                //     $http({
+                //         method: "GET",
+                //         url: "rest/departments/search/findByProvinceAndCityAndDistrict?province=" + province + "&city=" + city + "&district=" + district
+                //     }).success(function (resResult) {
+                //         if (resResult._embedded.departments.length > 0) {
+                //             $scope.departmentsOptions = resResult._embedded.departments
+                //
+                //         } else {
+                //             $scope.departmentsOptions = [{id: null, label: "该地区没有匹配的门店"}]
+                //         }
+                //     });
+                //
+                // };
+
+                $scope.createOrdercdd = function () {
+
+
+                    //var departments = $("#createddepartments").val();
+
+                    //if (!departments) {
+                    //$rootScope.toasterError("失败！", "该地区没有匹配的门店！");
+                    //} else {
+                    //     var province = $scope.province.text;
+                    //     if ($scope.city) {
+                    //         var city = $scope.city.text
+                    //     } else {
+                    //         var city = $scope.city
+                    //     }
+                    //     if ($scope.district) {
+                    //         var district = $scope.district.text
+                    //     } else {
+                    //         var district = $scope.district
+                    //     }
+
+                    $scope.form.applyEnterpriseProvince = $rootScope.myinfo.department.province + " " + $rootScope.myinfo.department.city + " " + $rootScope.myinfo.department.district;
+                    $scope.form.act                     = "create";
+                    $scope.form.createdByDepartment     = "/rest/departments/" + $rootScope.myinfo.department.id;
+
+                    $http({
+                        method: "POST",
+                        url: "/rest/ordercdds",
+                        data: $scope.form
+                    }).success(function (resResult) {
+                        console.log(resResult);
+                        $("#create_ordercdd_modal").modal("hide");
+
+                        $rootScope.toasterSuccess("成功！", "创建订单成功！");
+                        $state.reload();
+                    });
+
+                    // }
+
+                };
+
+                $scope.getSmsCode = function () {
+
+                    if (!$scope.captcha) {
+                        $rootScope.toasterInfo("注意！", "请输入图形验证码后再获取短信验证码！");
+                        return;
+                    }
+
+                    $http.get("/smsCode", {
+                        params: {
+                            mobile: $scope.form.applyMobile,
+                            captcha: $scope.captcha
+                        }
+                    }).success(function (resResult) {
+                        $rootScope.toasterSuccess("成功！", "获取验证码成功！");
+
+                        $("#ordercdd_captcha").attr("src", "/captcha?" + Math.random());
+
+                        $scope.getMsgTime = 60;
+
+                        $scope.msgTimeOver = true;
+
+                        var timer = $interval(function () {
+
+                            if ($scope.getMsgTime === 0) {
+                                $scope.msgTimeOver = false;
+                                $interval.cancel(timer);
+                            } else {
+                                $scope.getMsgTime -= 1;
+                            }
+
+                        }, 1000);
+
+                    });
+
+                };
+
+                $scope.refreshCaptcha = function () {
+                    $("#ordercdd_captcha").attr("src", "/captcha?" + Math.random());
+                };
+
+                entity.getList("/rest/ordercddWorkflows/ " + $stateParams.workflow_id + "/states").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+
+                        if (window.sessionStorage.getItem(window.myinfo.id + "ordercdd_state_code")) {
+                            angular.forEach($scope.states, function (val, key) {
+                                if (val.id == window.sessionStorage.getItem(window.myinfo.id + "ordercdd_state_code")) {
+                                    $scope.stateVal       = $scope.states[key];
+                                    $scope.forms.state_id = val.id;
+                                    $scope.state_id       = val.id;
+                                    $scope.getList(0);
+                                }
+                            })
+                        } else {
+                            $scope.forms.state_id = null;
+                            $scope.getList(0);
+                        }
+                    }
+                });
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                /*默认读取列表*/
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    $scope.forms.page = page;
+
+
+                    $http.get("/ordercddDomain/search", {
+                        params: $scope.forms
+                    }).then(function (resResult) {
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult.data.entitys);
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.data.size,
+                                total_elements: resResult.data.totalElements,
+                                current_page: resResult.data.number,
+                                num_page: resResult.data.totalPages,
+                                total_page: resResult.data.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#ordercdd_list_paginator", $scope.pageList, $scope.getList);
+
+                    });
+                };
+
+
+                /*状态改变时*/
+                $scope.stateChange = function (val) {
+                    $scope.forms      = {};
+                    $scope.forms.size = "10";
+                    $scope.forms.sort = "lastModifiedAt,desc";
+                    if (val) {
+                        window.sessionStorage.setItem(window.myinfo.id + "ordercdd_state_code", val.id);
+
+                        $scope.state_id       = val.id;
+                        $scope.forms.state_id = val.id;
+//                        $scope.getList(0);
+//                         $scope.searchSubmit();
+                    } else {
+                        window.sessionStorage.setItem(window.myinfo.id + "ordercdd_state_code", "");
+
+                        $scope.state_id       = null;
+                        $scope.forms.state_id = null;
+//                        $scope.getList(0);
+//                         $scope.searchSubmit();
+                    }
+                };
+
+
+                /*搜索*/
+                $scope.searchSubmit = function () {
+
+                    /*所属业务员*/
+                    $scope.searchForms.service_user_id = $scope.linkmanVal ? $scope.linkmanVal.id : null;
+
+                    if ($scope.searchForms.startDate) {
+                        $scope.searchForms.timeRangeKey = "createdAt";
+                    }
+
+                    if ($scope.searchForms.endDate) {
+                        $scope.searchForms.timeRangeKey = "createdAt";
+                    }
+
+                    /*合并对象*/
+                    $scope.forms = Object.assign($scope.searchForms, $scope.forms);
+
+                    $scope.getList(0);
+
+                };
+
+                //清除搜索
+                $scope.clearSearch = function () {
+                    $scope.forms       = {};
+                    $scope.searchForms = {};
+
+                    if ($scope.state_id) {
+                        $scope.forms.state_id = $scope.state_id;
+                    } else {
+                        $scope.forms.state_id = null;
+                    }
+
+                    $scope.forms.size = "10";
+                    $scope.forms.sort = "lastModifiedAt,desc";
+
+                    $scope.linkmanVal = null;
+                    $scope.getList(0);
+                };
+
+
+                /*获取所有能分配的人列表*/
+                $scope.linkmanList = [];
+
+//                $http.get("/linkman").success(function (resResult) {
+//                    angular.forEach(resResult, function (val, key) {
+//                        $scope.linkmanList[val.id] = val
+//                    });
+//                });
+                $http.get("/ordercdd/getNotCloneCountByServiceUser").success(function (resResult) {
+//                    angular.forEach(resResult, function (val, key) {
+//                        $scope.linkmanList[val.id] = val
+//                    });
+                    $scope.linkmanList = resResult.data.sort(function (a, b) {
+                        return a.notClone - b.notClone;
+                    });
+
+                });
+
+
+                /*根据分配人筛选*/
+                $scope.distributionPeopleSelect = function (linkmanVal) {
+                    if (linkmanVal) {
+                        $scope.linkmanVal = linkmanVal;
+                    }
+
+//                    if (linkmanVal) {
+//                        var url = "";
+//                        if ($scope.state_code === "allState") {
+//                            url = "rest/ordercdds/search/getOrdercddByServiceUser?sort=lastModifiedAt,desc&userid=" + linkmanVal.id
+//                        } else {
+//                            url = "rest/ordercdds/search/getOrdercddByStateCodeAndUser?sort=lastModifiedAt,desc&stateCode=" + $scope.state_code + "&userid=" + linkmanVal.id
+//                        }
+//
+//
+//                        entity.getList(url, ["state"]).then(function (resResult) {
+//
+//                            $scope.loading = false;
+//
+//                            $scope.list = resResult._embeddedItems;
+//
+//                            if ($scope.list.length > 0) {
+//                                $scope.pageList = {
+//                                    size: resResult.page.size,
+//                                    total_elements: resResult.page.totalElements,
+//                                    current_page: resResult.page.number,
+//                                    num_page: resResult.page.totalPages,
+//                                    total_page: resResult.page.totalPages
+//                                };
+//                            }else{
+//                                $scope.pageList = {
+//                                    size: 0,
+//                                    total_elements: 0,
+//                                    current_page: 0,
+//                                    num_page: 1,
+//                                    total_page: 1
+//                                };
+//                            }
+//
+//                            $rootScope.setPaginator("#ordercdd_list_paginator", $scope.pageList, $scope.getList);
+//
+//                        });
+//
+////                        $http({
+////                            method: "GET",
+////                            url: url
+////                        }).success(function (resResult) {
+////
+////                            $scope.list = resResult._embedded.ordercdds;
+////
+////                            $scope.pageList = {
+////                                size: resResult.page.size,
+////                                total_elements: resResult.page.totalElements,
+////                                current_page: resResult.page.number,
+////                                num_page: resResult.page.totalPages,
+////                                total_page: resResult.page.totalPages
+////                            };
+////
+////                            if ($scope.list.length > 0) {
+////                                $rootScope.setPaginator("#ordercdd_list_paginator", $scope.pageList, $scope.getList);
+////                            }
+////
+////                        });
+//                    } else {
+//                        $scope.getList(0);
+//                    }
+                };
+
+                $scope.startDateToday = function () {
+                    $scope.searchForms.startDate = new Date();
+                };
+
+                $scope.startDateClear = function () {
+                    $scope.searchForms.startDate = null;
+                };
+
+                $scope.endDateToday = function () {
+                    $scope.searchForms.endDate = new Date();
+                };
+
+                $scope.endDateClear = function () {
+                    $scope.searchForms.endDate = null;
+                };
+
+                $scope.openStart = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.startOpened = true;
+                    $scope.endOpened   = false;
+                };
+
+                $scope.openEnd = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.startOpened = false;
+                    $scope.endOpened   = true;
+                };
+
+                $scope.dateOptions = {
+                    formatYear: "yy",
+                    startingDay: 1,
+                    class: "datepicker",
+                    showWeeks: false
+                };
+
+
+//
+//                $scope.myKeyup = function(e){
+//                    console.log(e)
+//                    var keycode = window.event?e.keyCode:e.which;
+//                    if(keycode==13){
+//
+//                    }
+//                };
+
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="ordercddListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <div class="row">
+                    <div class=" col-xs-11">
+                        <form class="form-inline">
+                            <div class="clearfix">
+                                <div class="form-group m-r">
+                                    <label for="ordercdd_searchStates"
+                                           style="width:70px;text-align:right;">申请状态：</label>
+                                    <select ng-model="stateVal"
+                                            class="form-control input-sm" style="width:150px;"
+                                            id="ordercdd_searchStates"
+                                            ng-options="y.label for (x,y) in states"
+
+                                            ng-change="stateChange(stateVal)">
+                                        <option value="">全部</option>
+                                    </select>
+                                </div>
+                                <div class="form-group m-r">
+                                    <label for="ordercdd_searchLinkmanVal"
+                                           style="width: 83px;text-align:right;">业务员：</label>
+                                    <select class="form-control input-sm" style="width:150px;"
+                                            ng-model="linkmanVal"
+                                            id="ordercdd_searchLinkmanVal"
+                                            ng-options="y.name for (x,y) in linkmanList"
+                                            ng-change="distributionPeopleSelect(linkmanVal)">
+                                        <!--<option value="">&#45;&#45;未选择业务员&#45;&#45;</option>-->
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>创建时间：</label>
+                                    <div class="input-group">
+                                        <input type="text"
+                                               class="form-control input-sm" style="width:150px;"
+                                               placeholder="开始时间"
+                                               disabled
+                                               datepicker-popup="yyyy-MM-dd"
+                                               ng-model="searchForms.startDate"
+                                               is-open="startOpened"
+                                               datepicker-options="dateOptions"
+                                               current-text="今天"
+                                               clear-text="清除"
+                                               close-text="关闭"/>
+                                        <span class="input-group-btn">
+                                        <button type="button" class="btn btn-sm btn-default"
+                                                ng-click="openStart($event)">
+                                            <i class="fa fa-calendar"></i>
+                                        </button>
+                                    </span>
+                                    </div>
+                                    <span>-</span>
+                                    <div class="input-group">
+                                        <input type="text"
+                                               class="form-control input-sm" style="width:150px;"
+                                               placeholder="结束时间"
+                                               disabled
+                                               datepicker-popup="yyyy-MM-dd"
+                                               ng-model="searchForms.endDate"
+                                               is-open="endOpened"
+                                               datepicker-options="dateOptions"
+                                               current-text="今天"
+                                               clear-text="清除"
+                                               close-text="关闭"/>
+                                        <span class="input-group-btn">
+                                        <button type="button" class="btn btn-sm btn-default" ng-click="openEnd($event)">
+                                            <i class="fa fa-calendar"></i>
+                                        </button>
+                                    </span>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="m-t">
+                                <div class="form-group m-r">
+                                    <label for="ordercdd_searchLabelRealName" style="text-align:right;">客户姓名：</label>
+                                    <input type="text" class="form-control input-sm" style="width:150px;"
+                                           id="ordercdd_searchLabelRealName"
+                                           ng-model="searchForms.realName">
+                                </div>
+                                <div class="form-group m-r">
+                                    <label for="ordercdd_searchLabelApplyMobile" style="width:84px;text-align:right;">联系方式：</label>
+                                    <input type="text" class="form-control input-sm" style="width:150px;"
+                                           id="ordercdd_searchLabelApplyMobile"
+                                           ng-model="searchForms.applyMobile">
+                                </div>
+                            </div>
+                            <div class="m-t">
+                                <button class="btn btn-primary m-r" ng-click="searchSubmit()">
+                                    <i class="fa fa-search"></i>
+                                    查询
+                                </button>
+                                <button class="btn btn-default m-r" ng-click="clearSearch()">
+                                    <i class="fa fa-refresh"></i>
+                                    清空
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="pull-right inline col-xs-1">
+                        <button class="btn btn-sm btn-danger btn-addon" data-toggle="modal" ng-if="myInfo.role.id==22"
+                                data-target="#create_ordercdd_modal" ng-click="form = {};">
+                            <i class="fa fa-star"></i>
+                            新建
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="modal fade" id="create_ordercdd_modal">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                                <h4 class="modal-title" id="createDepartModal">新建车抵贷款业务</h4>
+                            </div>
+                            <div class="modal-body">
+                                <form name="create_ordercdd_form">
+                                    <!--<div class="form-group">-->
+                                    <!--<label>-->
+                                    <!--<span class="text-danger">*</span> <span-->
+                                    <!--translate="ordercdd.applyIdentityNo.label"></span>-->
+                                    <!--</label>-->
+                                    <!--<input type="text"-->
+                                    <!--class="form-control"-->
+                                    <!--name="applyIdentityNo"-->
+                                    <!--autocomplete="off"-->
+                                    <!--ng-model="form.applyIdentityNo"-->
+                                    <!--pattern="(^\d{18}$)|(^\d{17}(\d|X|x)$)"-->
+                                    <!--ng-change="applyIdentityNoFunction(form.applyIdentityNo)"-->
+                                    <!--&gt;-->
+                                    <!--<span class="help-block text-danger"-->
+                                    <!--ng-show="create_ordercdd_form.applyIdentityNo.$invalid">-->
+                                    <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的身份证号-->
+                                    <!--</span>-->
+                                    <!--</div>-->
+                                    <div class="form-group">
+                                        <label>
+                                            <span class="text-danger">*</span> <span
+                                                translate="ordercdd.realName.label"></span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control"
+                                               name="realName"
+                                               autocomplete="off"
+                                               required
+                                               ng-model="form.realName"
+                                        >
+                                        <span class="help-block text-danger"
+                                              ng-show="create_ordercdd_form.realName.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;姓名为必填
+                                        </span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>
+                                            <span class="text-danger">*</span> <span
+                                                translate="ordercdd.applyMobile.label"></span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control"
+                                               name="applyMobile"
+                                               autocomplete="off"
+                                               required
+                                               ng-model="form.applyMobile"
+                                               pattern="^(\+\d{2,3})?1(3|4|7|5|8)([0-9]{9})$">
+                                        <span class="help-block text-danger"
+                                              ng-show="create_ordercdd_form.applyMobile.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的手机号，且必填
+                                        </span>
+                                    </div>
+                                    <!--<div class="form-group">-->
+                                    <!--<label><span class="text-danger">*</span>所属区域</label>-->
+                                    <!--<region-select-store></region-select-store>-->
+                                    <!--<span class="help-block text-danger"-->
+                                    <!--ng-show="create_ordercdd_form.province.$invalid">-->
+                                    <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;省为必填-->
+                                    <!--</span>-->
+                                    <!--</div>-->
+                                    <!--<div class="form-group">-->
+                                    <!--<label>-->
+                                    <!--<span class="text-danger">*</span>-->
+                                    <!--<span>门店</span>-->
+                                    <!--</label>-->
+                                    <!--<select id="createddepartments" class="form-control">-->
+                                    <!--<option ng-repeat="item in departmentsOptions" value="{{item.id}}">-->
+                                    <!--{{item.label}}-->
+                                    <!--</option>-->
+                                    <!--</select>-->
+                                    <!--<span class="help-block text-danger"-->
+                                    <!--ng-show="create_ordercdd_form.departments.$invalid">-->
+                                    <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;门店为必填-->
+                                    <!--</span>-->
+                                    <!--</div>-->
+                                    <div class="form-group">
+                                        <label>
+                                            <span class="text-danger">*</span> <span>图形验证码</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   name="captcha"
+                                                   autocomplete="off"
+                                                   required
+                                                   ng-model="captcha"
+                                                   pattern="^[a-zA-Z0-9]{4}$"
+                                                   style="border-right: none;">
+                                            <span class="input-group-addon" style="padding: 0;border: none;">
+                                                <img id="ordercdd_captcha" src="/captcha" style="height: 34px;"
+                                                     ng-click="refreshCaptcha()">
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span class="help-block text-danger"
+                                                  ng-show="create_ordercdd_form.captcha.$invalid">
+                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入4位图形验证码
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>
+                                            <span class="text-danger">*</span> 短信验证码
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="text"
+                                                   class="form-control"
+                                                   name="smsCode"
+                                                   autocomplete="off"
+                                                   required
+                                                   ng-model="form.smsCode"
+                                                   pattern="^[0-9]{4}$">
+                                            <span class="input-group-btn">
+                                                <button class="btn btn-default" type="button"
+                                                        ng-disabled="msgTimeOver"
+                                                        ng-click="getSmsCode()">
+                                                    {{ getMsgTime?getMsgTime + "秒后":"" }}获取验证码
+                                                </button>
+
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span class="help-block text-danger"
+                                                  ng-show="create_ordercdd_form.smsCode.$invalid">
+                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入4位验证码
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>
+                                            <span translate="ordercdd.referralCode.label"></span>
+                                        </label>
+                                        <input type="text"
+                                               class="form-control"
+                                               name="referralCode"
+                                               autocomplete="off"
+                                               ng-model="form.referralCode"
+                                               pattern="^[0-9a-zA-Z]{4}$">
+                                        <span class="help-block text-danger"
+                                              ng-show="create_ordercdd_form.referralCode.$invalid">
+                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;推荐码为4位大小写字母数字组合，可不填写
+                                        </span>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        ng-disabled="create_ordercdd_form.$invalid"
+                                        ng-click="createOrdercdd()">确定
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light" style="border-bottom: none;">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>订单号</th>
+                                            <th>客户姓名</th>
+                                            <th>联系方式</th>
+                                            <th>服务门店</th>
+                                            <th>业务员</th>
+                                            <th>申请状态</th>
+                                            <th>创建时间</th>
+                                            <th>最后更新时间</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle">
+                                                <div class="btn-group" >
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            ng-disabled="item.listActs.length==0"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <!--<li><a ui-sref="workflowEntity.home.profile.info({id:item.id})">详情</a>-->
+                                                        </li>
+                                                        <li ng-repeat="act in item.listActs track by $index"
+                                                            ng-click="ordercddExcute[act.actCode](item)">
+                                                            <a>{{act.label}}</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+
+                                            <td class="v-middle list-hover-a">
+                                                <a ui-sref="workflowEntity.home.profile.info({id:item.id,entity_key:'ordercdd'})">
+                                                    {{ item.cddSn}}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle list-hover-a">
+                                                <span ng-if="!item.person_id">
+                                                    {{ item.realName }}
+                                                </span>
+                                                <a ng-if="item.person_id"
+                                                   ui-sref="workflowEntity.home.profile.info({id:item.person_id,entity_key:'person',workflow_id:'1'})">
+                                                    {{ item.realName }}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.applyMobile }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.createdByDepartment_label }}
+                                            </td>
+                                            <td class="v-middle list-hover-a">
+                                                     <span ng-if="!item.serviceUser_id">
+                                                {{ item.serviceUser_nickname?item.serviceUser_nickname:"未分配" }}
+                                                </span>
+
+                                                <a ng-if="item.serviceUser_id"
+                                                   ui-sref="workflowEntity.home.profile.info({id:item.serviceUser_id,entity_key:'manager'})">
+                                                    {{ item.serviceUser_nickname?item.serviceUser_nickname:"未分配" }}
+                                                </a>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.state_label }}
+                                            </td>
+                                            <td>
+                                                {{ item.createdAt | datetime }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.lastModifiedAt | datetime}}
+                                                <div class="modal fade" id="{{ item.id }}_generativeContract"
+                                                     tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-lg modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写未通过理由</h4>
+                                                            </div>
+                                                            <div class="modal-body"
+                                                                 id="{{ item.id }}_generativeContract_body">
+
+                                                            </div>
+
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_failed" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写未通过理由</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-2 text-right">理由</label>
+                                                                    <div class="col-lg-10">
+                                                                        <textarea class="form-control"
+                                                                                  ng-model="failedVla" cols="9"
+                                                                                  style="height: 250px">
+                                                                        </textarea>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.failedSave(failedVla,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_submitGPS" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写GPS编号</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-2 text-right">GPS编号</label>
+                                                                    <div class="col-lg-10">
+                                                                        <input class="form-control"
+                                                                               ng-model="submitGPSVla">
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.submitGPSSave(submitGPSVla,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_twoFailed" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请填写未通过理由</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-2 text-right">理由</label>
+                                                                    <div class="col-lg-10">
+                                                                        <textarea class="form-control"
+                                                                                  ng-model="failedVla" cols="9"
+                                                                                  style="height: 250px">
+                                                                        </textarea>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.twoFailedSave(failedVla,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_distribution" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">分配专属业务员</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix"
+                                                                     style="height: 500px;overflow-y: scroll;">
+                                                                    <div class="table-responsive cell-inner">
+                                                                        <table class="table table-hover b-t b-light"
+                                                                               style="border-bottom: none;">
+                                                                            <thead>
+                                                                            <tr>
+                                                                                <th></th>
+                                                                                <th>员工号</th>
+                                                                                <th>客服</th>
+                                                                                <th>没有完成的申请单树</th>
+                                                                            </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                            <tr ng-repeat="user in userList track by $index">
+                                                                                <td>
+                                                                                    <label class="i-checks i-checks-sm pull-left m-n"
+                                                                                           ng-click="userSelect($event,user)">
+                                                                                        <input type="radio" name="user"><i></i>
+                                                                                        {{user.label }}
+                                                                                    </label>
+                                                                                </td>
+                                                                                <td>
+                                                                                    {{ user.id }}
+                                                                                </td>
+                                                                                <td>
+                                                                                    {{ user.name }}
+                                                                                </td>
+                                                                                <td>
+                                                                                    {{ user.notClone }}
+                                                                                </td>
+                                                                            </tr>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                    <!--</div>-->
+                                                                </div>
+
+
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.distributionSave(distributionVal,item,user_code)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_upload">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close"
+                                                                        ng-click="uploader.clearQueue();setUploadDone();"
+                                                                        data-dismiss="modal">
+                                                                    <span>&times;</span>
+                                                                </button>
+                                                                <!--上传审核通过的文件-->
+                                                                {{ headerInformation }}
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="hbox hbox-auto-xs hbox-auto-sm"
+                                                                     nv-file-drop="" uploader="uploader"
+                                                                     filters="queueLimit, customFilter">
+                                                                    <div class="col w-lg bg-light b-r bg-auto">
+                                                                        <div class="wrapper-md dker b-b">
+                                                                            <h4 class="m-n font-thin">选择文件</h4>
+                                                                        </div>
+                                                                        <div class="wrapper-md">
+                                                                            <div ng-show="uploader.isHTML5"
+                                                                                 class="m-b-md">
+                                                                                <!-- 3. nv-file-over uploader="link" over-class="className" -->
+                                                                                <div class="b-a b-2x b-dashed wrapper-lg bg-white text-center m-b"
+                                                                                     nv-file-over="" over-class="b-info"
+                                                                                     uploader="uploader">
+                                                                                    拖动文件放到此处
+                                                                                </div>
+                                                                            </div>
+                                                                            <input id="audit_zip_file_input" class="w"
+                                                                                   type="file" nv-file-select=""
+                                                                                   multiple
+                                                                                   uploader="uploader"/>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col bg-light bg-auto">
+                                                                        <div class="wrapper-md bg-light dk b-b">
+                                                                            <span class="pull-right">文件数：
+                                                                                <b class="badge bg-info">{{ uploader.queue.length }}</b>
+                                                                            </span>
+                                                                            <h4 class="m-n font-thin text-danger ">
+                                                                                {{promptInformation}}</h4>
+                                                                        </div>
+                                                                        <div class="wrapper-md">
+                                                                            <table class="table bg-white-only b-a">
+                                                                                <thead>
+                                                                                <tr>
+                                                                                    <th>文件名</th>
+                                                                                    <th ng-show="uploader.isHTML5">大小
+                                                                                    </th>
+                                                                                    <th>状态</th>
+                                                                                    <th>操作</th>
+                                                                                </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                <tr ng-repeat="item in uploader.queue">
+                                                                                    <td>
+                                                                                        <div class="text-ellipsis w-sm">
+                                                                                            {{ item.file.name }}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td ng-show="uploader.isHTML5"
+                                                                                        nowrap>{{
+                                                                                        item.file.size/1024/1024|number:2
+                                                                                        }} MB
+                                                                                    </td>
+                                                                                    <td class="text-center">
+                                                                                        <span ng-show="item.isSuccess"
+                                                                                              class="text-success">
+                                                                                            <i class="fa fa-check"></i>
+                                                                                        </span>
+                                                                                        <span ng-show="item.isCancel"
+                                                                                              class="text-warning">
+                                                                                            <i class="fa fa-ban"></i>
+                                                                                        </span>
+                                                                                        <span ng-show="item.isError"
+                                                                                              class="text-danger">
+                                                                                            <i class="fa fa-cancel"></i>
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td nowrap>
+                                                                                        <button type="button"
+                                                                                                class="btn btn-default btn-xs"
+                                                                                                ng-click="item.upload()"
+                                                                                                ng-disabled="item.isReady || item.isUploading || item.isSuccess">
+                                                                                            上传
+                                                                                        </button>
+                                                                                        <button type="button"
+                                                                                                class="btn btn-default btn-xs"
+                                                                                                ng-disabled="item.isReady || item.isUploading || item.isSuccess"
+                                                                                                ng-click="item.remove();setUploadDone();">
+                                                                                            清除
+                                                                                        </button>
+                                                                                    </td>
+                                                                                </tr>
+                                                                                </tbody>
+                                                                            </table>
+                                                                            <div>
+                                                                                <div>
+                                                                                    <p>进度</p>
+                                                                                    <div class="progress bg-light dker"
+                                                                                         style="">
+                                                                                        <div class="progress-bar progress-bar-striped bg-info"
+                                                                                             role="progressbar"
+                                                                                             ng-style="{ 'width': uploader.progress + '%' }"></div>
+                                                                                    </div>
+                                                                                    <div class="m-t m-b font-bold h4 text-danger"
+                                                                                         ng-if="uploader.progress === 100 && !uploadDone">
+                                                                                        服务器正在处理中，请稍等。。。
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button type="button"
+                                                                                        class="btn btn-addon btn-success"
+                                                                                        ng-click="uploader.uploadAll()"
+                                                                                        ng-disabled="!uploader.getNotUploadedItems().length">
+                                                                                    <i class="fa fa-arrow-circle-o-up"></i>
+                                                                                    上传
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_matching" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">匹配销售产品</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-2 " style="margin-top: 8px">销售产品</label>
+                                                                    <div class="col-lg-10">
+                                                                        <select ng-model="productVal"
+                                                                                class="form-control"
+                                                                                ng-options="y.label for (x,y) in productList">
+                                                                            <option value="">--请销售产品--</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.matchingSave(productVal,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_modifyApplyAmount"
+                                                     tabindex="-1" role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请输入修改额度</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-4 control-label text-right">当前额度：</label>
+                                                                    <div class="col-lg-8">
+                                                                        <span>{{ profile.applyAmount }}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-4 control-label text-right">额度：</label>
+                                                                    <div class="col-lg-8">
+                                                                        <input type="text" class="form-control"
+                                                                               ng-model="modifyApplyAmountVal">
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.modifyApplyAmountSave(modifyApplyAmountVal,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal fade" id="{{ item.id }}_changeID" tabindex="-1"
+                                                     role="dialog">
+                                                    <div class="modal-xs modal-dialog" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <button type="button" class="close" data-dismiss="modal"
+                                                                        aria-label="Close">
+                                                                    <span aria-hidden="true">×</span>
+                                                                </button>
+                                                                <h4 class="modal-title">请输入修改身份证号</h4>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-4 control-label text-right">当前身份证：</label>
+                                                                    <div class="col-lg-8">
+                                                                        <span>{{ profile.applyIdentityNo }}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="form-group clearfix">
+                                                                    <label class="col-lg-4 control-label text-right">修改为：</label>
+                                                                    <div class="col-lg-8">
+                                                                        <input type="text" class="form-control"
+                                                                               ng-model="changeIDVal">
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer text-center">
+                                                                <button type="button" class="btn btn-success w-lg"
+                                                                        ng-click="ordercddExcute.changeIDSave(changeIDVal,item)">
+                                                                    提交
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="ordercdd_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }}
+                    条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

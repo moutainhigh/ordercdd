@@ -1,0 +1,33 @@
+package com.liyang.service.check.cdd;
+
+import com.liyang.domain.base.BaseEntity;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.person.Person;
+import com.liyang.domain.person.PersonRepository;
+import com.liyang.service.check.AbstractCheck;
+import com.liyang.util.Assert;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+
+/**
+ * 当新建业务时，查询自然人信息，发现输入的客户手机号存在，客户姓名不一致时，提示: 该手机号已经绑定了其他客户，请联系管理员处理。
+ */
+public class CddCreateCheckMobile extends AbstractCheck<Ordercdd> {
+    private PersonRepository personRepository;
+
+    public CddCreateCheckMobile(PersonRepository personRepository) {
+        this.personRepository = personRepository;
+    }
+
+    @Override
+    public void handler(Ordercdd ordercdd) {
+        Person person = personRepository.findByTelephone(ordercdd.getApplyMobile());
+        if (person != null && person.getName() != null && !person.getName().equals(ordercdd.getRealName())) {
+            throw new FailReturnObject(1357, "提示: 该手机号已经绑定了其他客户，请重新填写。", ReturnObject.Level.INFO);
+        }
+    }
+}

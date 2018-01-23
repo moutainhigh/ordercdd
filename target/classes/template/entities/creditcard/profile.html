@@ -1,0 +1,26 @@
+<div class="vbox bg-white">
+    <div class="wrapper bg-white b-b clearfix">
+        <ul class="nav nav-pills nav-sm">
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.info">主页</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'creditcard',view_type:'loan'})">贷款信息</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'creditcard',view_type:'creditrepayment'})">还款信息</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'creditcard',view_type:'file'})">文件列表</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'creditcard',view_type:'log'})">操作记录</a>
+            </li>
+        </ul>
+    </div>
+    <div class="row-row">
+        <div class="cell scrollable">
+            <div class="cell-inner" ui-view=""></div>
+        </div>
+    </div>
+</div>

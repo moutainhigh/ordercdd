@@ -1,0 +1,399 @@
+package com.liyang.service;
+
+import static com.liyang.domain.capitalproduct.Capitalproduct.RepaymentMethodCode.BEFORE_INTEREST_AFTER_PRINCIPAL;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
+
+import com.liyang.domain.base.AbstractAuditorAct.ActGroup;
+import com.liyang.domain.base.ActRepository;
+import com.liyang.domain.base.AuditorEntityRepository;
+import com.liyang.domain.base.LogRepository;
+import com.liyang.domain.capitalproduct.Capitalproduct;
+import com.liyang.domain.creditcard.Creditcard;
+import com.liyang.domain.creditrepayment.Creditrepayment;
+import com.liyang.domain.creditrepayment.CreditrepaymentRepository;
+import com.liyang.domain.creditrepayplan.Creditrepayplan;
+import com.liyang.domain.creditrepayplan.CreditrepayplanRepository;
+import com.liyang.domain.creditrepayplan.CreditrepayplanState;
+import com.liyang.domain.creditrepayplan.CreditrepayplanStateRepository;
+import com.liyang.domain.loan.Loan;
+import com.liyang.domain.loan.LoanAct;
+import com.liyang.domain.loan.LoanActRepository;
+import com.liyang.domain.loan.LoanFile;
+import com.liyang.domain.loan.LoanLog;
+import com.liyang.domain.loan.LoanLogRepository;
+import com.liyang.domain.loan.LoanRepository;
+import com.liyang.domain.loan.LoanState;
+import com.liyang.domain.loan.LoanStateRepository;
+import com.liyang.domain.loan.LoanUtil;
+import com.liyang.domain.loan.LoanWorkflow;
+import com.liyang.domain.loan.LoanWorkflowRepository;
+import com.liyang.domain.loan.Loanoverdue;
+import com.liyang.domain.loan.LoanoverdueRepository;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.orderwdsjsh.Orderwdsjsh;
+import com.liyang.domain.orderwdsjsh.OrderwdsjshRepository;
+import com.liyang.domain.product.Product;
+import com.liyang.domain.productstorefee.ProductstorefeeRepository;
+import com.liyang.domain.role.RoleRepository;
+import com.liyang.domain.storeadvance.Storeadvance;
+import com.liyang.domain.storeadvance.Storeadvance.StoreadvanceType;
+import com.liyang.domain.storeadvance.StoreadvanceRepository;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject.Level;
+import com.liyang.util.SerialNumberUtil;
+
+@Service
+@Order(37)
+public class LoanService extends AbstractWorkflowService<Loan, LoanWorkflow, LoanAct, LoanState, LoanLog, LoanFile> {
+
+	@Value("${spring.wlqz.wechat.OPEN_ACC_SUCCESS}")
+	private String OPEN_ACC_SUCCESS;
+
+	@Autowired
+	LoanActRepository loanActRepository;
+	@Autowired
+	LoanStateRepository loanStateRepository;
+	@Autowired
+	LoanLogRepository loanLogRepository;
+	@Autowired
+	LoanRepository loanRepository;
+	@Autowired
+	LoanService loanService;
+	@Autowired
+	LoanWorkflowRepository loanWorkflowRepository;
+	@Autowired
+	RoleRepository roleRepository;
+	@Autowired
+	WlqzWechatPubService wechatPubService;
+	@Autowired
+	OrderwdsjshRepository orderwdsjshRepository;
+	@Autowired
+	CreditrepayplanService creditrepayplanService;
+	@Autowired
+	CreditrepaymentRepository creditrepaymentRepository;
+	@Autowired
+	CreditrepayplanRepository creditrepayplanRepository;
+	@Autowired
+	CreditrepayplanStateRepository creditrepayplanStateRepository;
+	@Autowired
+	ProductstorefeeRepository productstorefeeRepository;
+	@Autowired
+	LoanexceptionService loanexceptionService;
+	@Autowired
+	LoanoverdueRepository loanoverdueRepository;
+	@Autowired
+	StoreadvanceRepository storeadvanceRepository;
+	
+	@Override
+	@PostConstruct
+	public void sqlInit() {
+		long count = loanActRepository.count();
+		if (count==0) {
+
+			LoanAct save1 = loanActRepository.save(new LoanAct("创建", "create", 10, ActGroup.UPDATE));
+			LoanAct save2 = loanActRepository.save(new LoanAct("读取", "read", 20, ActGroup.READ));
+			LoanAct save3 = loanActRepository.save(new LoanAct("更新", "update", 30, ActGroup.UPDATE));
+			LoanAct save4 = loanActRepository.save(new LoanAct("删除", "delete", 40, ActGroup.UPDATE));
+			LoanAct save5 = loanActRepository.save(new LoanAct("自己的列表", "listOwn", 50, ActGroup.READ));
+			LoanAct save6 = loanActRepository.save(new LoanAct("部门的列表", "listOwnDepartment", 60, ActGroup.READ));
+			LoanAct save7 = loanActRepository
+					.save(new LoanAct("部门和下属部门的列表", "listOwnDepartmentAndChildren", 70, ActGroup.READ));
+			LoanAct save8 = loanActRepository.save(new LoanAct("通知其他人", "noticeOther", 80, ActGroup.NOTICE));
+			LoanAct save9 = loanActRepository.save(new LoanAct("通知操作者", "noticeActUser", 90, ActGroup.NOTICE));
+			LoanAct save10 = loanActRepository.save(new LoanAct("通知展示人", "noticeShowUser", 100, ActGroup.NOTICE));
+
+			LoanState newState = new LoanState("已创建", 0, "CREATED");
+			newState = loanStateRepository.save(newState);
+
+			LoanState enableState = new LoanState("有效", 100, "ENABLED");
+			enableState.setActs(Arrays.asList(save1, save2, save3, save4, save5, save6, save7).stream()
+					.collect(Collectors.toSet()));
+			loanStateRepository.save(enableState);
+			loanStateRepository.save(new LoanState("无效", 200, "DISABLED"));
+			loanStateRepository.save(new LoanState("已删除", 300, "DELETED"));
+		}
+	}
+
+	@Override
+	public LogRepository<LoanLog> getLogRepository() {
+		return loanLogRepository;
+	}
+
+	@Override
+	public AuditorEntityRepository<Loan> getAuditorEntityRepository() {
+		return loanRepository;
+	}
+
+	@Override
+	@PostConstruct
+	public void injectLogRepository() {
+		new Loan().setLogRepository(loanLogRepository);
+
+	}
+
+	@Override
+	public LoanLog getLogInstance() {
+		return new LoanLog();
+	}
+
+	@Override
+	public ActRepository<LoanAct> getActRepository() {
+		return loanActRepository;
+	}
+
+	@Override
+	@PostConstruct
+	public void injectEntityService() {
+		new Loan().setService(this);
+
+	}
+
+	@Override
+	public LoanFile getFileLogInstance() {
+		return new LoanFile();
+	}
+
+	/**
+	 * 	applyUser = userService.doBeforeAct(applyUser, actApply, null, fromUser);
+			applyUser = userRepository.save(applyUser);
+			timService.addUser(applyUser.getOpenid(), applyUser.getNickname(), applyUser.getHeadimgurl());
+			userService.doAfterAct(applyUser, null, fromUser);
+	 * @param loan
+	 */
+	@Transactional
+	public void save(Loan loan,String message,Object type){
+		LoanAct loanAct=loanActRepository.findByActCode("loanAction");
+		if(null == loanAct) {
+			throw new FailReturnObject(9945, "未能获取编码为loanAction的LoanAct动作对象",Level.ERROR);
+		}
+		loanService.doBeforeAct(loan, loanAct, null, null);
+		loanRepository.save(loan);
+		loanService.doAfterAct(loan, null, null);
+		Orderwdsjsh orderwdsjsh=orderwdsjshRepository.getByTelephoneAndStatCode(loan.getCreditcard().getCreditcardIdentity()+"", "ENABLED");
+		if (type!=null&& "2".equals(type.toString())) {
+			wechatPubService.pushLoanMessage(orderwdsjsh.getCreatedBy(), orderwdsjsh.getRealName(), loan.getPrincipal().intValue()+"", message, "个人贷款",OPEN_ACC_SUCCESS );
+		}else if (type!=null && "1".equals(type.toString())) {
+			wechatPubService.pushLoanMessage(orderwdsjsh.getCreatedBy(), orderwdsjsh.getRealName(),loan.getPrincipal().intValue()+"", message, "公司",OPEN_ACC_SUCCESS);
+		}
+	}
+
+	public void doLoan(Loan loan)
+	{
+		if(loan.getLoanType()==null){
+			throw new FailReturnObject(1843,"请传入还款类型:loanType",Level.ERROR);
+		}
+		switch (loan.getLoanType())
+		{
+			case ORDERCDD:
+				creditrepayplanService.insertPlayPlanByOrdercdd(loan);
+				break;
+			default:
+				throw new FailReturnObject(1743,"放款类型不存在:"+loan.getLoanType(),Level.FATAL);
+		}
+		Ordercdd ordercdd=loan.getOrdercdd();
+		wechatPubService.pushOpenAccMessage(ordercdd.getUser(), "已放款", ordercdd.getRealName(), ordercdd.getApplyMobile(),null,"");
+		//放贷时间
+		loan.setLoanTime(new Date());
+		loanRepository.save(loan);
+	}
+	
+	
+	/**创建一条贷款
+	 * 客户实际放款金额=贷款金额-产品匹配时收费中的一次性收费（选择不分期的费用）   {是否可退不影响实际放款金额，只是用来标志费用性质以便使用}
+	 * @param ordercdd
+	 * @param creditcard
+	 * @return
+	 */
+	public Loan save(Ordercdd ordercdd, Creditcard creditcard) {
+		Product product=ordercdd.getProduct();
+		Capitalproduct capitalproduct=product.getCapitalproduct();
+		Loan loan = new Loan();
+		loan.setState(loanStateRepository.findByStateCode("NOTLEND"));//具体状态问项目经理
+		creditcard.setCreditBalance(BigDecimal.valueOf(0));
+		loan.setCreditcard(creditcard);//所属授信账户
+		loan.setRepaymentMethodCode(BEFORE_INTEREST_AFTER_PRINCIPAL);//先息后本
+		loan.setPrincipal(creditcard.getCreditGrant());//贷款本金
+		loan.setPeriodCode(capitalproduct.getPeriodCode());//贷款分期时间单位 类型冲突  为了统一类型，全部放在了loan.PeriodCode
+		loan.setPeriodNumber(ordercdd.getProduct().getPeriodNumber());//贷款分期期数
+
+		Assert.notNull(product.getDebtorInterest(),"销售产品的借方利率不能为空");
+		loan.setDebtorInterest(product.getDebtorInterest());//借方利率
+		loan.setStoreInterest(product.getStoreInterest());//给门店利率
+		loan.setCreditorInterest(capitalproduct.getCreditorInterest());//贷方供应利率
+//        loan.setDebtorReceiveBankcard();//借方收款账户
+		loan.setCreditorRepaymentDay(capitalproduct.getCreditorRepaymentDay());//还给资方的日期
+
+//        loan.setDebtorRepaymentDay(/**product.getDebtorRepaymentDay()**/1);//借方还款的时间  没卵用，已注释
+		loan.setDebtorExtentedRepaymentDays(capitalproduct.getOverdueGraceDays());//借方还款宽限日期数  --这里取的的资金产品的逾期天数，不知对不对
+		//说明
+		//内部备注
+		if(product.getPunishinterestrule()!=null){loan.setPunishinterestrule(product.getPunishinterestrule());}else {loan.setPunishinterestrule(capitalproduct.getPunishinterestrule());}//罚息规则
+		loan.setDebtorUser(ordercdd.getUser());//贷款人
+		loan.setDebtorPerson(ordercdd.getPerson());//贷款自然人
+		// loan.setCreditorLoanSn(ordercdd.getCddSn());//资方贷款单号
+		loan.setServiceUserName(ordercdd.getServiceName());//业务员姓名
+		loan.setServiceUser(ordercdd.getServiceUser());//业务员id
+		loan.setLoanSn(SerialNumberUtil.INSTANCE.create(SerialNumberUtil.SerialType.LOAN));
+		loan.setOrdercdd(ordercdd);
+		loan.setDebtorName(ordercdd.getRealName());
+
+		LoanUtil util = new LoanUtil();
+		Loan tempLoan = util.calculateFeebackup(loan.getPrincipal(), ordercdd.getFeebackups());
+		//收费项目
+		loan.setOneTimeFee(tempLoan.getOneTimeFee());
+		loan.setRetreatFee(tempLoan.getRetreatFee());
+		//实际应该放款金额
+		loan.setDebtorRealityAmount(tempLoan.getDebtorRealityAmount());
+		loan.setOverdue(false);//默认状态未逾期
+		loan.setIsException(false);
+
+		loan.setWorkflow(loanWorkflowRepository.findOne(1));
+		loanRepository.save(loan);
+		return  loan;
+	}
+	
+	/**转异常催收
+	 * @param loan
+	 * @return
+	 */
+	public Loan doException(Loan loan) {
+		BigDecimal debtorRepayAmount = debtorRepayAmount(loan);//客户已还金额
+		BigDecimal debtorLeftAmount = debtorLeftAmount(loan);//客户剩余应还金额
+		loanexceptionService.create(loan, debtorRepayAmount, debtorLeftAmount);
+		loan.setIsException(true);
+		loanRepository.save(loan);
+		return loan;
+	}
+	
+	/**计算客户某个贷款的所有已还金额
+	 * @param loan
+	 * @return
+	 */
+	public BigDecimal debtorRepayAmount(Loan loan) {
+		//所有还款记录
+		List<Creditrepayment> mentList = creditrepaymentRepository.findByLoanId(loan.getId());
+		BigDecimal debtorRepayAmount = new BigDecimal("0");//客户已还金额
+		if (mentList == null) {
+			return debtorRepayAmount;
+		}
+		for (Creditrepayment ment : mentList) {
+			BigDecimal realAmount = ment.getRealAmount();
+			if (realAmount == null || (new BigDecimal(0).compareTo(realAmount)) >= 0) {//不能小于等于0
+				continue;
+			}
+			debtorRepayAmount = debtorRepayAmount.add(realAmount);
+		}
+		return debtorRepayAmount;
+	}
+	
+	/**计算客户某个贷款的所有未还金额
+	 * @param loan
+	 * @return
+	 */
+	public BigDecimal debtorLeftAmount(Loan loan) {
+		//所有还款计划
+		List<Creditrepayplan> planList = creditrepayplanRepository.findByLoanId(loan.getId());
+		BigDecimal debtorLeftAmount = new BigDecimal("0");//客户剩余应还金额
+		if (planList == null) {
+			return debtorLeftAmount;
+		}
+		for (Creditrepayplan plan : planList) {
+			BigDecimal leftAmount = plan.getLeftAmount();
+			Boolean isOverdue = plan.getIsOverdue();
+			isOverdue = (isOverdue == null || (!isOverdue))? false : true;
+			if (leftAmount == null || (new BigDecimal(0).compareTo(leftAmount)) >= 0) {//不能小于等于0
+				continue;
+			}
+			if (isOverdue) {//已逾期
+				continue;
+			}
+			debtorLeftAmount = debtorLeftAmount.add(leftAmount);
+		}
+		Loanoverdue loanoverdue = loanoverdueRepository.findEnable(loan.getId());
+		if (loanoverdue != null) {//逾期金额
+			debtorLeftAmount = debtorLeftAmount.add(loanoverdue.getOverdueAmount());
+		}
+		return debtorLeftAmount;
+	}
+	
+	/**计算门店垫付的逾期利息，只计算已到账的
+	 * @param loan
+	 * @return
+	 */
+	public BigDecimal storeAdvanceInterest(Loan loan) {
+		List<Storeadvance> list = storeadvanceRepository.findByLoanAndType(loan.getId(), StoreadvanceType.OVERDUE);
+		BigDecimal storeAdvanceInterest = new BigDecimal("0");
+		if (list == null) {
+			return storeAdvanceInterest;
+		}
+		for (Storeadvance storeadvance : list) {
+			BigDecimal realAmount = storeadvance.getRealAmount();
+			if (realAmount == null || (new BigDecimal(0).compareTo(realAmount)) >= 0) {//不能小于等于0
+				continue;
+			}
+			storeAdvanceInterest = storeAdvanceInterest.add(realAmount);
+		}
+		return storeAdvanceInterest;
+	}
+	
+	/**确认坏账之后，逾期计算停止,将所有计划的状态改为DISABLED，逾期记录设置为结束
+	 * @param loan
+	 */
+	public void closePlan(Loan loan) {
+		//所有还款计划
+		List<Creditrepayplan> planList = creditrepayplanRepository.findByLoanId(loan.getId());
+		if (planList == null) {
+			return;
+		}
+		CreditrepayplanState state = creditrepayplanStateRepository.findByStateCode("DISABLED");
+		List<Creditrepayplan> updateList = new ArrayList<>();
+		for (Creditrepayplan plan : planList) {
+			plan.setState(state);
+			updateList.add(plan);
+		}
+		if (!updateList.isEmpty()) {
+			creditrepayplanRepository.save(updateList);
+		}
+		//逾期记录
+		Loanoverdue loanoverdue = loanoverdueRepository.findEnable(loan.getId());
+		if (loanoverdue != null) {//逾期金额
+			loanoverdue.setFinishAt(new Date());
+			loanoverdue.setStatus(1);
+			loanoverdueRepository.save(loanoverdue);
+		}
+	}
+	
+	/**所有还款计划剩余金额清零
+	 * @param loan
+	 */
+	public void resetPlan(Loan loan) {
+		//所有还款计划
+		List<Creditrepayplan> planList = creditrepayplanRepository.findByLoanId(loan.getId());
+		if (planList == null) {
+			return;
+		}
+		List<Creditrepayplan> updateList = new ArrayList<>();
+		for (Creditrepayplan plan : planList) {
+			plan.setLeftAmount(new BigDecimal(0));
+			updateList.add(plan);
+		}
+		if (!updateList.isEmpty()) {
+			creditrepayplanRepository.save(updateList);
+		}
+	}
+}

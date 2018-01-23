@@ -1,0 +1,47 @@
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    还款记录
+                </div>
+                <table ng-if="creditrepayments.length < 1" class="table table-hover b-light" >
+                    <tr>
+                        <td>
+                            暂无数据！
+                        </td>
+                    </tr>
+                </table>
+                <table ng-if="creditrepayments.length > 0" class="table table-hover b-light" style="border-bottom: none;table-layout: fixed;">
+                    <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>还款单号</th>
+                        <th>还款时间</th>
+                        <th>还款金额(元)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="item in creditrepayments">
+                        <td class="v-middle">
+                            {{ item.id }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.mentSn }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.creditorRepaymentDate | datetime}}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.fees }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+            <!--<div class="m-t">记录...</div>-->
+        <!--</div>-->
+    </div>
+</div>

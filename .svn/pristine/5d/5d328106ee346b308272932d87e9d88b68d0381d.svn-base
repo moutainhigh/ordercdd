@@ -1,0 +1,303 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="ordercddmatchingExcute[act.actCode](profile)"
+            tooltip="{{act.help}}"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+    <div class="modal fade" id="{{ profile.id }}_paymentApply">
+        <div class="modal-xs modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>×</span>
+                    </button>
+                    <h4 class="modal-title">资金产品匹配</h4>
+                </div>
+                <div class="modal-body">
+                    <form name="step1" class="form-horizontal form-validation">
+                        <div class="form-group clearfix">
+                            <label class="col-lg-2 control-label text-right margin-top">资方</label>
+                            <div class="col-lg-8">
+                                <select class="form-control"
+                                        ng-model="departmentVal"
+                                        id="ordercddmatching_departmentVal"
+                                        name="ordercddmatching_departmentVal"
+                                        ng-options="y.label for (x,y) in departments"
+                                        ng-change="ordercddmatchingExcute.getDepartment(departmentVal)" required>
+                                    <option value="">不选择</option>
+                                </select>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.ordercddmatching_departmentVal.$invalid">
+                                        <i class="fa fa-exclamation-circle text-danger"></i>&ensp;资方为必选
+                                    </span>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <!--<div class="form-group clearfix" ng-if="capitalproductShow">-->
+                            <label class="col-lg-2 control-label text-right margin-top">资方产品</label>
+                            <div class="col-lg-8">
+                                <select class="form-control"
+                                        ng-model="capitalproductVal"
+                                        id="ordercddmatching_capitalproductVal"
+                                        name="ordercddmatching_capitalproductVal"
+                                        ng-options="y.label for (x,y) in capitalproducts" required>
+                                    <option value="">不选择</option>
+                                </select>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.ordercddmatching_capitalproductVal.$invalid">
+                                        <i class="fa fa-exclamation-circle text-danger"></i>&ensp;资方产品为必选
+                                    </span>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <label class="col-lg-2 control-label text-right margin-top">申请额度</label>
+                            <div class="col-lg-8">
+                                <div class="input-group">
+                                    <input type="text"
+                                           name="apply_applyVal"
+                                           class="form-control"
+                                           ng-model="applyVal"
+                                           required
+                                           pattern="^\d+(?:.\d{1,2})?$">
+                                    <span class="input-group-addon">元</span>
+                                </div>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.apply_applyVal.$invalid">
+                                          <i class="fa fa-exclamation-circle text-danger"></i>&ensp;申请额度为数字(最多两位小数)，且必填
+                                    </span>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <label class="col-lg-2 control-label text-right margin-top">剩余额度</label>
+                            <div class="col-lg-8">
+                                <label style="font-size: 24px;">
+                                    {{ profile.leftMatchAmount ? profile.leftMatchAmount : "0"}} 元
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg" ng-disabled="step1.$invalid"
+                            ng-click="ordercddmatchingExcute.paymentApplySave(departmentVal,capitalproductVal,applyVal,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_uploadSupplement">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close"
+                            ng-click="uploader.clearQueue();setUploadDone();"
+                            data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                    上传补充资料
+                </div>
+                <div class="modal-body">
+                    <div class="hbox hbox-auto-xs hbox-auto-sm" nv-file-drop="" uploader="uploader"
+                         filters="queueLimit, customFilter">
+                        <div class="col w-lg bg-light b-r bg-auto">
+                            <div class="wrapper-md dker b-b">
+                                <h4 class="m-n font-thin">选择上传文件内容</h4>
+                            </div>
+                            <div class="wrapper-md">
+                                <div class="m-b-md">
+                                    <select class="form-control"
+                                            ng-model="uploadType"
+                                            ng-options="uploadType.label for uploadType in canFileActs"
+                                            ng-change="setCategory(uploadType)">
+
+                                    </select>
+                                </div>
+                                <input id="audit_zip_file_input" class="w" type="file"
+                                       nv-file-select=""
+                                       multiple
+                                       uploader="uploader"/>
+                            </div>
+                        </div>
+                        <div class="col bg-light bg-auto">
+                            <div class="wrapper-md bg-light dk b-b">
+                                    <span class="pull-right">文件数：
+                                        <b class="badge bg-info">{{ uploader.queue.length }}</b>
+                                    </span>
+                                <h4 class="m-n font-thin text-danger ">文件上传</h4>
+                            </div>
+                            <div class="wrapper-md">
+                                <table class="table bg-white-only b-a">
+                                    <thead>
+                                    <tr>
+                                        <th>文件名</th>
+                                        <th ng-show="uploader.isHTML5">大小</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr ng-repeat="item in uploader.queue">
+                                        <td>
+                                            <div class="text-ellipsis w-sm">{{ item.file.name }}
+                                            </div>
+                                        </td>
+                                        <td ng-show="uploader.isHTML5" nowrap>{{
+                                            item.file.size/1024/1024|number:2
+                                            }} MB
+                                        </td>
+                                        <td class="text-center">
+                                                    <span ng-show="item.isSuccess" class="text-success">
+                                                        <i class="fa fa-check"></i>
+                                                    </span>
+                                            <span ng-show="item.isCancel" class="text-warning">
+                                                        <i class="fa fa-ban"></i>
+                                                    </span>
+                                            <span ng-show="item.isError" class="text-danger">
+                                                        <i class="fa fa-cancel"></i>
+                                                    </span>
+                                        </td>
+                                        <td nowrap>
+                                            <button type="button" class="btn btn-default btn-xs" ng-disabled="item.isReady || item.isUploading || item.isSuccess"
+                                                    ng-click="item.remove();setUploadDone();">
+                                                清除
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                                <div>
+                                    <div>
+                                        <p>进度</p>
+                                        <div class="progress bg-light dker" style="">
+                                            <div class="progress-bar progress-bar-striped bg-info"
+                                                 role="progressbar"
+                                                 ng-style="{ 'width': uploader.progress + '%' }"></div>
+                                        </div>
+                                        <div class="m-t m-b font-bold h4 text-danger"
+                                             ng-if="uploader.progress === 100 && !uploadDone">
+                                            服务器正在处理中，请稍等。。。
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-addon btn-success"
+                                            ng-click="uploader.uploadAll()"
+                                            ng-disabled="!uploader.getNotUploadedItems().length">
+                                        <i class="fa fa-arrow-circle-o-up"></i> 上传
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="wrapper">
+    <div class="row">
+        <div class="col-sm-8">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    个人信息
+                </div>
+                <table class="table table-striped m-b-none" style="border-bottom: none;">
+                    <thead>
+                    <tr>
+                        <th class="text-center">订单号</th>
+                        <th class="text-center">客户名称</th>
+                        <th class="text-center">客户身份证</th>
+                        <th class="text-center">门店</th>
+                        <th class="text-center">销售产品</th>
+                        <th class="text-center">授信额度(元)</th>
+
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-center">
+                            {{ profile.cddSn }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ profile.realName }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ profile.applyIdentityNo }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ profile.createdByDepartment.label }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ profile.product.label }} - {{ profile.product.periodNumber }} - {{
+                            profile.repaymentMethodCode=="LEND_REPAY_ON_DEMAND"?
+                            "随借随还":(profile.repaymentMethodCode=="BEFORE_INTEREST_AFTER_PRINCIPAL"?"先息后本":(profile.repaymentMethodCode=="AVERAGE_CAPITAL_PLUS_INTEREST"?"等额本息":(profile.repaymentMethodCode=="AVERAGE_CAPITAL"?"等额本金":"暂无设置")))
+                            }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ profile.applyAmount |number }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class=" col-sm-4">
+            <div class="panel panel-default">
+                <div class="panel-body wrapper-md">
+                    <div>
+                        <i class="pull-left thumb-md fa fa-jpy fa-5x"></i>
+                    </div>
+                    <div class="clear">
+                        <div style="font-size: large">剩余匹配额度</div>
+                        <div style="font-size: xx-large; color: #00b0ff">{{ profile.leftMatchAmount ?
+                            (profile.leftMatchAmount | number) : "0" }} 元
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    额度构成
+                </div>
+                <table class="table table-striped m-b-none" style="border-bottom: none;">
+                    <thead>
+                    <tr>
+                        <th class="text-center">申请流水</th>
+                        <th class="text-center">资金产品</th>
+                        <th class="text-center">申请金额</th>
+                        <th class="text-center">状态</th>
+                        <th class="text-center">最近修改时间</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr  ng-repeat="ordercddloan in ordercddloans">
+                        <td class="v-middle text-center">
+                            {{ ordercddloan.ordercddloanSn }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ ordercddloan.capitalproduct.label }} - {{ ordercddloan.capitalproduct.periodNumber }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ ordercddloan.applyAmount }}
+                        </td>
+                        <td class="v-middle text-center">
+                           {{ ordercddloan.state.label }}
+                        </td>
+                        <td class="v-middle text-center">
+                            {{ ordercddloan.lastModifiedAt | datetime }}
+                        </td>
+
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

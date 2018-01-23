@@ -1,0 +1,37 @@
+<script>
+    "use strict";
+    app.controller("loancollectionProfileController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "entity",
+            function ($rootScope, $scope, $http, entity) {
+            }
+        ]
+    );
+</script>
+<div class="vbox bg-white" ng-controller="loancollectionProfileController">
+    <div class="wrapper bg-white b-b">
+        <ul class="nav nav-pills nav-sm">
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.info">主页</a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="workflowEntity.home.profile.page({entity_key:'loancollection',view_type:'file'})">申请文件</a>
+            </li>
+            <!--<li ui-sref-active="active">-->
+                <!--<a ui-sref="workflowEntity.home.profile.file({entity_key:'loancollection',view_type:'log'})">操作记录</a>-->
+            <!--</li>-->
+        </ul>
+    </div>
+    <!--<div class="wrapper b-b clearfix">-->
+   <!---->
+
+    <!--</div>-->
+    <div class="row-row">
+        <div class="cell scrollable">
+            <div class="cell-inner" ui-view=""></div>
+        </div>
+    </div>
+</div>

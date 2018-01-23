@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>工作流查看</title>
+        <link rel="stylesheet" href="../../libs/jsmind/jsmind.min.css">
+        <style>
+            * {
+                padding: 0;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <select id="workflow-select" onchange="getWorkflowStates()"></select>
+        </div>
+        <div id="workflow-mind" style="height: calc(100% - 21px);width: 100%;"></div>
+        <script src="https://cdn.bootcss.com/jquery/2.1.4/jquery.min.js"></script>
+        <script src="../../libs/jsmind/jsmind.min.js"></script>
+        <script src="../../libs/jsmind/app.min.js"></script>
+    </body>
+</html>

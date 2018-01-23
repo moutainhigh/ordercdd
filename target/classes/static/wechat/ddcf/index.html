@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" ng-app="app">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Cache-Control" content="no-cache">
+
+
+    <link rel="stylesheet" href="css/weui.min.css">
+    <link rel="stylesheet" href="css/weui2.min.css">
+    <link rel="stylesheet" href="css/icon.css">
+    <link rel="stylesheet" href="css/animate.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="libs/need/layer.css">
+
+
+</head>
+<body style="background: #fff;height: 100%" ng-controller="appCtrl">
+<div style="height: 100%" ui-view=""></div>
+</body>
+<script src="js/config.js"></script>
+<script src="https://res.wx.qq.com/open/js/jweixin-1.2.0.js"></script>
+<script src="libs/jquery-3.2.1.min.js"></script>
+<script src="libs/zepto.min.js"></script>
+<script src="libs/layer.js"></script>
+<script src="libs/picker.js"></script>
+<script src="libs/picker-city.js"></script>
+<script src="libs/angular.min.js"></script>
+<script src="libs/angular-ui-router.min.js"></script>
+<script src="js/controllers.js"></script>
+<script src="js/route.js"></script>
+<script src="js/services.js"></script>
+<script src="libs/loading.js" defer></script>
+
+
+
+
+<script>
+    angular.module('app',['ui.router','app.routes','app.controllers','app.services'])
+</script>
+</html>

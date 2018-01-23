@@ -1,0 +1,658 @@
+<script>
+    "use strict";
+    app.controller("ordercddListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                /*
+                *上传合同
+                * */
+                $scope.urlName = "";
+                $rootScope.contractCategory = {};
+
+                /*
+                * ordercddId
+                * */
+                $scope.ordercddId = null;
+
+                /*分配业务员逻辑*/
+                $scope.userList = {};
+
+                $scope.getList = function () {
+                    $http.get('/ordercdd/getNotCloneCountByServiceUser').success(function (resResult) {
+
+                        $scope.userList = resResult.data.sort(function (a, b) {
+                            return a.notClone - b.notClone;
+                        });
+
+                    });
+                };
+
+                /*分配业务员 单选
+                *
+                * */
+                $scope.user_code = null;
+                $scope.getList();
+                $scope.userSelect = function ($event, stateCode) {
+                    if ($event.target.nodeName === "INPUT") {
+                        $scope.user_code = stateCode;
+                    }
+                };
+
+                /*重新分配业务员 单选
+                *
+                * */
+                $scope.again_user_code = null;
+                $scope.getList();
+                $scope.againUserSelect = function ($event, stateCode) {
+                    if ($event.target.nodeName === "INPUT") {
+                        $scope.again_user_code = stateCode;
+                    }
+                };
+
+
+                /**分配业务员逻辑结束****/
+
+
+                /*获得所有授权给门店的销售产品*/
+                $scope.productList = {};
+
+                $scope.getProductList = function () {
+                    var link = "/rest/departments/" + window.myinfo.department.id + "/products";
+
+                    entity.getList(link).then(function (resResult) {
+//                        $scope.list = resResult._embeddedItems;
+                        angular.forEach(resResult._embeddedItems, function (val, key) {
+                            $scope.productList[val.id] = val
+                        })
+                    });
+                };
+
+                $scope.getProductList();
+
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data, popup) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "取消",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+
+                            $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+
+                            if (popup) {
+                                $rootScope.toasterSuccess("成功！", popup);
+                            }
+                        });
+                    });
+                };
+
+                /*大方法的对象*/
+                $scope.ordercddExcute = {
+
+                    /*关闭*/
+                    "disable": function (profile) {
+                        $scope.patchAct("error", "这条客户信息是否关闭", "/rest/ordercdds/" + profile.id, {act: "disable"}, "关闭成功！");
+                    },
+
+                    "downloadFile": function (profile) {
+                        swal({
+                            title: "是否下载所有图片",
+                            type: "warning",
+                            showCancelButton: true,
+                            cancelButtonText: "取消",
+                            confirmButtonText: "同意",
+                            closeOnConfirm: true
+                        }, function () {
+                            var html = '<div style="position: fixed;top: 50%;right: 50%" class="sk-spinner sk-spinner-cube-grid" id="loadAction">' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '<div class="sk-cube"></div>' +
+                                '</div>';
+                            $("body").append(html);
+
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {act: "downloadFile"}
+                            }).success(function (resResult) {
+                                $("#loadAction").remove();
+                                if (resResult.filePackage) {
+                                    $("#loadAction").remove();
+                                    var form = $("<form>");//定义一个form表单
+                                    form.attr("style", "display:none");
+                                    form.attr("target", "");
+                                    form.attr("method", "get");
+                                    form.attr("action", "http://files.xiaojinpingtai.com/" + resResult.filePackage.newFileName);
+
+                                    $("body").append(form);//将表单放置在web中
+                                    form.submit();
+                                } else {
+                                    $("#loadAction").remove();
+                                    $rootScope.toasterWarning("注意", "该用户没有上传任何的图片！");
+                                }
+                            });
+                        });
+
+
+                    },
+
+                    /*分配客服经理*/
+                    "distribution": function (profile) {
+                        $("#" + profile.id + "_distribution").modal("show");
+                    },
+
+                    "distributionSave": function (val, profile, val1) {
+                        if ($scope.user_code) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {
+                                    act: "distribution",
+                                    notice: $scope.user_code.id,
+                                    serviceId: $scope.user_code.id
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_distribution").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+                            });
+                        } else {
+                            $rootScope.toasterWarning("注意", "请选择一个客服经理！");
+                        }
+                    },
+
+                    /*重新分配客服经理*/
+                    "redistribution": function (profile) {
+                        $("#" + profile.id + "_redistribution").modal("show");
+                    },
+
+                    "redistributionSave": function (val, profile, val1) {
+
+                        console.log($scope.again_user_code)
+                        if ($scope.again_user_code) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {
+                                    act: "redistribution",
+                                    notice: $scope.again_user_code.id,
+                                    serviceId: $scope.again_user_code.id
+                                }
+                            }).success(function (resResult) {
+                                $rootScope.toasterSuccess("成功", "已重新分配客服经理！");
+                                $("#" + profile.id + "_redistribution").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+                            });
+                        } else {
+                            $rootScope.toasterWarning("注意", "请选择一个客服经理！");
+//                        }
+                        }
+                    },
+
+
+                    /*提交资料*/
+                    "application": function (profile) {
+                        $http({
+                            method: "GET",
+                            url: "rest/ordercdds/" + profile.id
+                        }).success(function (resResult1) {
+                            if (resResult1.applyIdentityNo && resResult1.applyMobile) {
+                                $http({
+                                    method: "GET",
+                                    url: "rest/ordercdds/" + profile.id + "/product"
+                                }).success(function (resResult) {
+                                    console.log(resResult);
+                                    if (resResult) {
+                                        $scope.patchAct("success", "这条客户信息是否提交", "/rest/ordercdds/" + profile.id, {act: "application"}, "提交成功！");
+                                    } else {
+                                        $rootScope.toasterWarning("注意", "客户销售产品没有匹配！");
+                                    }
+                                });
+                            } else {
+                                $rootScope.toasterWarning("注意", "客户信息不全请去添加！");
+                            }
+
+                        });
+                    },
+
+                    /*匹配销售产品*/
+                    "matching": function (profile) {
+                        $("#" + profile.id + "_matching").modal("show");
+                    },
+
+                    /*匹配销售产品保存*/
+                    "matchingSave": function (val, profile) {
+                        if (val) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {
+                                    act: "matching",
+                                    product: val._links.product.href
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_matching").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+                            });
+                        } else {
+                            $rootScope.toasterWarning("注意", "请选择一个销售产品！");
+                        }
+
+                    },
+
+
+                    /*一审驳回打开modal*/
+                    "failed": function (profile) {
+                        $("#" + profile.id + "_failed").modal("show");
+                    },
+
+                    /*驳回理由加改变状态*/
+                    "failedSave": function (failedVal, profile) {
+
+                        if (failedVal) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {
+                                    act: "failed",
+                                    comment: failedVal,
+                                    notice: profile.serviceUser.id
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_failed").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+                                $rootScope.toasterInfo("成功！", "已一审驳回！");
+                            });
+
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+                        }
+                    },
+
+
+                    /*一审同意 同时并向客户发合同*/
+                    "adopt": function (profile) {
+//                        $("#" + $scope.profile.id + "_upload").modal("show");
+                        $scope.patchAct("success", "这条客户信息是否能通过", "/rest/ordercdds/" + profile.id, {
+                            act: "adopt",
+                            notice: profile.serviceUser.id
+                        }, "已一审通过！");
+                    }, /*一审驳回打开modal*/
+
+
+
+                    /*二审驳回*/
+                    "twoFailed": function (profile) {
+                        $("#" + profile.id + "_twoFailed").modal("show");
+                    },
+                    /*二审理由加改变状态*/
+                    "twoFailedSave": function (failedVal, profile) {
+                        if (failedVal) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {
+                                    act: "twoFailed",
+                                    comment: failedVal
+                                    // notice: profile.serviceUser.id
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_twoFailed").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+                                $rootScope.toasterInfo("成功！", "已二审驳回！");
+                            });
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+                        }
+                    },
+
+
+                    /*二审同意 同时并向客户发合同*/
+                    "twoAdopt": function (profile) {
+
+                        $scope.patchAct("success", "这条客户信息是否能通过", "/rest/ordercdds/" + profile.id, {
+                            act: "twoAdopt",
+                            notice: profile.serviceUser.id
+                        }, "已二审通过！");
+                    },
+
+                    /*一审驳回打开modal*/
+                    "submitGPS": function (profile) {
+                        $("#" + profile.id + "_submitGPS").modal("show");
+                    },
+
+                    /*GPS*/
+                    "submitGPSSave": function (submitGPSVal, profile) {
+                        if (submitGPSVal) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/ordercdds/" + profile.id,
+                                data: {
+                                    act: "submitGPS",
+                                    gpscode: submitGPSVal
+                                }
+                            }).success(function (resResult) {
+
+                                $("#" + profile.id + "_submitGPS").modal("hide");
+                                $http({
+                                    method:"PATCH",
+                                    url:profile.vehicle._links.self.href,
+                                    data:{
+                                        act:"update",
+                                        gpscode:submitGPSVal
+                                    }
+                                }).success(function(result){
+                                    $state.reload();
+                                    $rootScope.toasterSuccess("成功！", "提交GPS编号成功！");
+                                });
+
+                            });
+
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+                        }
+                    },
+
+
+                    /*二审提交资料提交*/
+                    "twoApplication": function (profile) {
+                        $scope.patchAct("success", "这条客户信息是否能通过", "/rest/ordercdds/" + profile.id, {
+                            act: "twoApplication"
+                            // notice: profile.serviceUser.id
+                        }, "提交资料成功！");
+                    },
+
+
+                    /*上传合同*/
+                    "uploadContract": function (profile) {
+                        $scope.urlName           = "";
+                        $scope.headerInformation = "上传合同";
+                        $scope.ordercddId        = profile.id;
+                        $scope.uploader.clearQueue();
+                        $("#" + profile.id + "_upload").modal("show");
+                    },
+
+
+                    /*签约*/
+                    "sign": function (profile) {
+                        $scope.patchAct("success", "这条客户信息是否能签约", "/rest/ordercdds/" + profile.id, {act: "sign"}, "签约成功！");
+
+//                        $http({
+//                            method: "GET",
+//                            url: "/rest/ordercdds/" + profile.id
+//                        }).success(function (resResult) {
+//                            $http({
+//                                method: "GET",
+//                                url: resResult._links.files.href
+//                            }).success(function (resResult2) {
+//                                var isFalse = false;
+//                                angular.forEach(resResult2._embedded.ordercddFiles, function (val, key) {
+//                                    if ((val.topcategory === "签约合同") && (val.newFileName)) {
+//                                        isFalse = true;
+//                                    }
+//                                });
+//                                if (isFalse) {
+//                                    $scope.patchAct("success", "这条客户信息是否能签约", "/rest/ordercdds/" + profile.id, {act: "sign"}, "签约成功！");
+//                                } else {
+//                                    $rootScope.toasterWarning("注意", "请先上传合同，再签约！");
+//                                }
+//                            });
+//
+//                        });
+//
+//                        if ($scope.urlName && profile.id == $scope.ordercddId) {
+//                            $scope.patchAct("success", "这条客户信息是否能签约", "/rest/ordercdds/" + profile.id, {act: "sign"},"签约成功！");
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请先上传合同，再签约！");
+//                        }
+                    },
+
+
+
+
+                    /*生成合同*/
+                    "generativeContract": function (profile) {
+
+                        var contractVal = {};
+                        $http({
+                            method: "GET",
+                            url: "/ordercddDomain/detail?ordercddId=" + profile.id
+                        }).success(function (resResult) {
+                            contractVal = resResult;
+//                            angular.forEach(resResult.feebackups, function (val, key) {
+//                                if (val.feeAmount) {
+//                                    contractVal[val.feetype.feetypeCode] = val.feeAmount
+//                                }
+//                            });
+                            angular.forEach(resResult.feebackups, function (val, key) {
+                                if(val.backupsource !=="COMPANYFEE"){
+                                    if(val.feetype.label =="管理费"){
+                                        $scope.fManagementExpense =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="服务费"){
+                                        $scope.fServiceCharge  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="公证费"){
+                                        $scope.fNotarizationFee  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="保费"){
+                                        $scope.fPremium  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="GPS安装费"){
+                                        $scope.GPSInstallationFee  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="抵押登记费"){
+                                        $scope.fMortgageRegistrationFee  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="其他收费"){
+                                        $scope.fOtherCharges  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="保证金"){
+                                        $scope.fBond  =val.feeAmount
+                                    }
+                                    if(val.feetype.label =="押金"){
+                                        $scope.fDeposit  =val.feeAmount
+                                    }
+                                }
+                            });
+
+                            console.log(contractVal,'q');
+
+
+                            function timeYear(a) {
+                                return moment(a).format("YYYY-MM");
+                            }
+                           var yearExpirationDate = timeYear(contractVal.vehicleDate)
+
+                            swal({
+                                title: "是否根据现在的数据生成合同",
+                                type: "warning",
+                                showCancelButton: true,
+                                cancelButtonText: "取消",
+                                confirmButtonText: "同意",
+                                closeOnConfirm: true
+                            }, function () {
+                                window.open('contract/template/forward/contract?' +
+                                    'userName=' + contractVal.realName +
+                                    '&userPhone=' + (contractVal.applyMobile ? contractVal.applyMobile : '无') +
+                                    '&userIdCard=' + (contractVal.applyIdentityNo ? contractVal.applyIdentityNo : '无') +
+                                    '&EnterpriseProvince=' + (contractVal.applyEnterpriseProvince ? contractVal.applyEnterpriseProvince : '无') +
+                                    '&BankCardBranch=' + (contractVal.applyBankCardBranch ? contractVal.applyBankCardBranch : '无') +
+                                    '&BankCard=' + (contractVal.applyBankCard ? contractVal.applyBankCard : '无') +
+                                    '&applyAmount=' + (contractVal.applyAmount ? contractVal.applyAmount : '无') +
+                                    '&plateNumber=' + (contractVal.applyPlateNumber ? contractVal.applyPlateNumber : '无') +
+                                    '&serviceUserName=' + (contractVal.serviceName ? contractVal.serviceName : '无') +
+                                    '&vehicleType=' + (contractVal.applyVehicleModel ? contractVal.applyVehicleModel : '无') +
+                                    '&yearExpirationDate=' + (yearExpirationDate ? yearExpirationDate : '无') +
+                                    '&vehicleProvince=' + (contractVal.vehicleProvince ? contractVal.vehicleProvince : '无') +
+                                    '&vehicleCity=' + (contractVal.vehicleCity ? contractVal.vehicleCity : '无') +
+                                    '&vehicleKm=' + (contractVal.vehicleKm ? contractVal.vehicleKm : '无') +
+                                    '&customerService' + (contractVal.serviceName ? contractVal.serviceName : '无') +
+                                    '&monthInterestRate=' + (contractVal.monthDebtorInterest ? (contractVal.monthDebtorInterest * 100 ) : '无') +
+                                    '&managementExpense=' + (contractVal.managementExpense ? contractVal.managementExpense : '无') +
+                                    '&serviceCharge=' + (contractVal.serviceCharge ? contractVal.serviceCharge : '无') +
+                                    '&notarizationFee=' + (contractVal.notarizationFee ? contractVal.notarizationFee : '无') +
+                                    '&vehiclePremium=' + (contractVal.vehiclePremium ? contractVal.vehiclePremium : '无') +
+                                    '&GPSInstallationFee=' + (contractVal.GPSInstallationFee ? contractVal.GPSInstallationFee : '无') +
+                                    '&mortgageRegistrationFee=' + (contractVal.mortgageRegistrationFee ? contractVal.mortgageRegistrationFee : '无') +
+                                    '&debtorInterest=' + (contractVal.debtorInterest ? (contractVal.debtorInterest * 100 ) : '无') +
+                                    '&otherFee=' + (contractVal.otherFee ? contractVal.otherFee : '无') +
+                                    '&lumpSumFee=' + (contractVal.managementExpense ? contractVal.managementExpense : '无') +
+                                    '&bond=' + (contractVal.bondFee ? contractVal.bondFee : '无') +
+                                    '&IllegalDeposit=' + (contractVal.illegalDeposit ? contractVal.illegalDeposit : '无') +
+                                    '&otherDeposit=' + (contractVal.otherDeposit ? contractVal.otherDeposit : '无') +
+                                    '&TotalRefundableCharges=' + (contractVal.retreatFee ? contractVal.retreatFee : '无') +
+                                    '&CreditedAmount=' + (contractVal.debtorRealityAmount ? contractVal.debtorRealityAmount : '无') +
+                                    '&fManagementExpense=' + ($scope.fManagementExpense ? $scope.fManagementExpense : '无') +   //管理费
+                                    '&fServiceCharge=' + ($scope.fServiceCharge ? $scope.fServiceCharge : '无') +               //服务费
+                                    '&fNotarizationFee=' + ($scope.fNotarizationFee ? $scope.fNotarizationFee : '无') +   //公证费
+                                    '&fPremium=' + ($scope.fPremium ? $scope.fPremium : '无') +   //保费
+                                    '&GPSInstallationFee=' + ($scope.GPSInstallationFee ? $scope.GPSInstallationFee : '无') +   //GPS安装费
+                                    '&fMortgageRegistrationFee=' + ($scope.fMortgageRegistrationFee ? $scope.fMortgageRegistrationFee : '无') +   //抵押登记费
+                                    '&fOtherCharges=' + ($scope.fOtherCharges ? $scope.fOtherCharges : '无') +   //其他收费
+                                    '&fBond=' + ($scope.fBond ? $scope.fBond : '无') +   //保证金
+                                    '&fDeposit=' + ($scope.fDeposit ? $scope.fDeposit : '无')    //押金
+                                    , '_blank')
+                            })
+                        });
+
+
+                    },
+
+
+                    "updateSave": function (profile) {
+                        $scope.profile.act = "update";
+                        delete $scope.profile.createdBy;
+                        $http({
+                            method: "PATCH",
+                            url: "/rest/ordercdds/" + profile.id,
+                            data: $scope.profile
+                        }).success(function (resResult) {
+                            if (resResult) {
+                                $rootScope.toasterSuccess("成功！", "保存成功！");
+                                $state.reload();
+                            }
+
+                        });
+                    },
+
+
+                    "update": function (profile) {
+                        $state.go("workflowEntity.home.profile.form", {
+                            id: profile.id,
+                            entity_key: "ordercdd"
+                        }, {reload: false});
+                    }
+                };
+
+
+                /*上传文件*/
+                //以下是上传文件的动作详情参考前端框架示例 js/controllers/file-upload.js
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 10;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+                    console.log(fileItem,'fileItem')
+                    console.log(fileItem._file.size,'fileItem.i._file.size')
+
+                    if(fileItem._file.size>1024*1024*3){
+                        $rootScope.toasterError("图片不能超过3M!", "请重新上传！");
+                        fileItem.remove();
+
+                    }else{
+
+                        fileItem.actCode = $rootScope.contractCategory.actCode;
+//                    if (fileItem.file.type !== "application/x-zip-compressed") {
+//
+//                        $rootScope.toasterError("警告！", "审核文件的格式需要为ZIP的压缩文件格式！");
+//
+//                        fileItem.remove();
+//
+//                    } else {
+                        fileItem.topcategory = $rootScope.contractCategory.topcategory;
+                        fileItem.subcategory = $rootScope.contractCategory.subcategory;
+                        fileItem.formData = [{fileType: "file"}];
+//                    }
+
+//                    $("#audit_zip_file_input").val("");
+
+                    }
+
+
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    console.log(fileItem,'fileItem')
+                    console.log(response,'response')
+
+                    //增加目录结构
+                    response.result.topcategory = fileItem.topcategory;
+                    response.result.subcategory = fileItem.subcategory;
+
+                    console.log(fileItem.subcategory)
+
+                    $scope.urlName = response.result.newFileName;
+
+                    $http({
+                        method: "PATCH",
+                        url: "/rest/ordercdds/" + $scope.ordercddId,//这里是关联的实体
+                        data: {
+                            fileObject: response.result,//fileObject是上传完文件后的文件对象
+                            act: fileItem.actCode//上传文件的行为
+                        }
+                    }).success(function (data) {
+                        $("#" + $scope.ordercddId + "_upload").modal("hide");
+                        $rootScope.toasterSuccess("成功", "合同上传成功");
+                    });
+
+                }
+
+            }
+        ]
+    );
+</script>
+
+
+<div ng-controller="ordercddListModuleController" class="h-full" ui-view></div>

@@ -1,0 +1,152 @@
+<div class="wrapper b-b b-light clearfix" ng-if="canActs.length > 0">
+    <button ng-class="act.btnClass"
+            ng-click="baddebtExcute[act.actCode](profile)"
+            tooltip="{{act.help}}"
+            tooltip-placement="bottom"
+            ng-repeat="act in canActs">
+        <i ng-class="act.iconClass"></i> {{act.label}}
+    </button>
+    <div class="modal fade" id="{{ profile.id }}_failed" tabindex="-1" role="dialog">
+        <div class="modal-xs modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                    <h4 class="modal-title">请填写未通过理由</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group clearfix">
+                        <label class="col-lg-2 text-right">理由</label>
+                        <div class="col-lg-10">
+                                <textarea class="form-control" ng-model="failedVla" cols="9" style="height: 250px">
+                                </textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg"
+                            ng-click="baddebtExcute.failedSave(failedVla,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="{{ profile.id }}_adopt">
+        <div class="modal-xs modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>×</span>
+                    </button>
+                    <h4 class="modal-title">资方回款申请</h4>
+                </div>
+                <div class="modal-body">
+                    <form name="step1" class="form-horizontal form-validation">
+                        <div class="form-group clearfix">
+                            <label class="col-lg-4 control-label text-right margin-top">申请额度</label>
+                            <div class="col-lg-6">
+                                <label style="font-size: 24px;">
+                                    {{ profile.applyAmount ? profile.applyAmount : "0"}} 元
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group clearfix">
+                            <label class="col-lg-4 control-label text-right margin-top">同意额度</label>
+                            <div class="col-lg-6">
+                                <div class="input-group">
+                                    <input type="text"
+                                           name="apply_applyVal"
+                                           class="form-control"
+                                           ng-model="applyVal"
+                                           required
+                                           pattern="^\d+(?:.\d{1,2})?$">
+                                    <span class="input-group-addon">元</span>
+                                </div>
+                                <span class="help-block text-danger"
+                                      ng-show="step1.apply_applyVal.$invalid">
+                                          <i class="fa fa-exclamation-circle text-danger"></i>&ensp;申请额度为数字(最多两位小数)，且必填
+                                    </span>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+                <div class="modal-footer text-center">
+                    <button type="button" class="btn btn-success w-lg" ng-disabled="step1.$invalid"
+                            ng-click="baddebtExcute.adoptSave(applyVal,profile)">
+                        提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<div class="wrapper" ng-if="profile.comment">
+    <div class="row">
+        <div class="col-xs-12 col-sm-10">
+            <div class="panel panel-danger">
+                <div class="panel-heading">
+                    驳回理由
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">驳回理由：</td>
+                        <td class="v-middle"colspan="3">{{ profile.comment }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="wrapper">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    申请信息
+                </div>
+                <table class="table table-striped m-b-none">
+                    <tbody>
+                    <tr>
+                        <td class="v-middle text-right w-sm">订单号：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.cddSn }}</td>
+                        <td class="v-middle text-right w-sm">资金单号：</td>
+                        <td class="v-middle w-xl">{{ profile.baddebtSn }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">客户名称：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.realName }}</td>
+                        <td class="v-middle text-right w-sm">联系电话：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.applyMobile }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">申请额度：</td>
+                        <td class="v-middle w-xl">{{ profile.applyAmount }}</td>
+                        <td class="v-middle text-right w-sm">授信额度：</td>
+                        <td class="v-middle w-xl">{{ profile.ordercdd.applyAmount }}</td>
+                    </tr>
+                    <tr>
+                        <td class="v-middle text-right w-sm">资金产品：</td>
+                        <td class="v-middle w-xl">{{ profile.capitalproduct.label }}</td>
+                        <td class="v-middle text-right w-sm">状态：</td>
+                        <td class="v-middle w-xl">{{ profile.state.label }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+            <!--<ul class="list-group">-->
+                <!--<li class="list-group-item" ng-repeat="item in stateActList"></li>-->
+            <!--</ul>-->
+        <!--</div>-->
+    </div>
+</div>

@@ -1,0 +1,104 @@
+<script>
+    "use strict";
+    app.controller("personOverdueController",
+        [
+            "$rootScope",
+            "$scope",
+            "$stateParams",
+            "entity",
+            function ($rootScope, $scope, $stateParams, entity) {
+
+                $scope.personLoans = [];
+                $scope.loanoverdues = [];
+                $scope.loan = null;
+
+                entity.getList("loan/search?person_id=" + $stateParams.id).then(function (resResult) {
+                    $scope.personLoans = resResult.entitys;
+                    $scope.loan = $scope.personLoans[0];
+                    $scope.getLoanOverdue();
+                });
+
+                $scope.getLoanOverdue = function () {
+
+                    if($scope.loan){
+                        entity.getList("/rest/loans/" + $scope.loan.id + "/loanoverdues").then(function (resResult) {
+
+                            $scope.loanoverdues = resResult._embeddedItems;
+
+                        });
+                    }else{
+                        $scope.loanoverdues = [];
+                    }
+
+                };
+            }
+        ]
+    )
+</script>
+<div class="wrapper" ng-controller="personOverdueController">
+    <div class="row">
+        <div class="col-xs-12 col-sm-12">
+            <form class="form-inline m-b">
+                <div class="form-group m-r">
+                    <label>借款单：</label>
+                    <select ng-model="loan"
+                            class="form-control input-sm" style="width:150px;"
+                            ng-options="loan.loanSn for loan in personLoans"
+                            ng-change="getLoanOverdue()">
+                    </select>
+                </div>
+            </form>
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    逾期记录
+                </div>
+                <table ng-if="loanoverdues.length < 1" class="table table-hover b-light" >
+                    <tr>
+                        <td>
+                            暂无数据！
+                        </td>
+                    </tr>
+                </table>
+                <table ng-if="loanoverdues.length > 0" class="table table-hover b-light" style="border-bottom: none;">
+                    <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>逾期发生时间</th>
+                        <th>逾期天数</th>
+                        <th>逾期金额(元)</th>
+                        <!--<th>逾期罚息率(%)</th>-->
+                        <th>状态</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr ng-repeat="item in loanoverdues">
+                        <td class="v-middle">
+                            {{ item.id }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.createdAt | datetime }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.overdueDays }}
+                        </td>
+                        <td class="v-middle">
+                            {{ item.penalSum }}
+                        </td>
+                        <!--<td class="v-middle">-->
+                            <!--{{ item.punishinterestrule_rate }}-->
+                        <!--</td>-->
+                        <td class="v-middle">
+                            {{ item.status?'已结清':'逾期中' }}
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+        </div>
+        <!--<div class="col-xs-12 col-sm-2">-->
+        <!--<div class="m-t">记录...</div>-->
+        <!--</div>-->
+    </div>
+</div>

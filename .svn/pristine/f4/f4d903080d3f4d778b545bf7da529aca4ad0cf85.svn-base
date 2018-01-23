@@ -1,0 +1,341 @@
+<script>
+    "use strict";
+    app.controller("bankcardListController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, entity) {
+
+                $scope.states = [];
+                $scope.state = {};
+
+                /*搜索值的对象*/
+                $scope.searchForms = {};
+
+                $scope.forms = {};
+
+                /*初始值*/
+                $scope.forms.state_id = $scope.state_id;
+                $scope.forms.size     = "10";
+                $scope.forms.sort     = "id,desc";
+
+                entity.getList("/rest/bankcardStates?sort=sort").then(function (resResult) {
+                    $scope.states = resResult._embeddedItems;
+                    if ($scope.states.length > 0) {
+
+                        $scope.states = $scope.states.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+                        if (window.sessionStorage.getItem(window.myinfo.id + "bankcard_state_code")) {
+                            angular.forEach($scope.states, function (val, key) {
+                                if (val.id == window.sessionStorage.getItem(window.myinfo.id + "bankcard_state_code")) {
+                                    $scope.stateVal       = $scope.states[key];
+                                    $scope.forms.state_id = val.id;
+                                    $scope.state_id       = val.id;
+                                    $scope.getList(0);
+                                }
+                            })
+                        } else {
+                            $scope.forms.state_id = null;
+                            $scope.getList(0);
+                        }
+
+//                        angular.forEach($scope.states,function(state, index){
+//                            if(state.stateCode === "ENABLED"){
+//                                $scope.state = state;
+//                            }
+//                        });
+//
+//                        $scope.state_code = $scope.state.stateCode;
+//
+//                        $scope.getList(0);
+                    }
+                });
+
+                $scope.pageList = {
+                    size: 0,
+                    total_elements: 0,
+                    current_page: 0,
+                    num_page: 1,
+                    total_page: 1
+                };
+
+                $scope.list = [];
+
+                /*默认读取列表*/
+                $scope.getList = function (page) {
+
+                    $scope.loading = true;
+
+                    $scope.list = [];
+
+                    $scope.forms.page = page;
+
+
+                    $http.get("/bankcard/search", {
+                        params: $scope.forms
+                    }).success(function (resResult) {
+                        console.log(resResult,'bankcard')
+
+                        $scope.loading = false;
+
+                        $scope.list = entity.getListActs(resResult.entitys);
+
+                        if ($scope.list.length > 0) {
+                            $scope.pageList = {
+                                size: resResult.size,
+                                total_elements: resResult.totalElements,
+                                current_page: resResult.number,
+                                num_page: resResult.totalPages,
+                                total_page: resResult.totalPages
+                            };
+                        } else {
+                            $scope.pageList = {
+                                size: 0,
+                                total_elements: 0,
+                                current_page: 0,
+                                num_page: 1,
+                                total_page: 1
+                            };
+                        }
+
+                        $rootScope.setPaginator("#bankcard_list_paginator", $scope.pageList, $scope.getList);
+                    });
+                };
+                //状态
+                $scope.stateChange = function (val) {
+                    $scope.forms = {};
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "id,desc";
+                    if(val){
+                        window.sessionStorage.setItem(window.myinfo.id + "bankcard_state_code", val.id);
+                        $scope.state_id = val.id;
+
+                        $scope.forms.state_id = val.id;
+                        // $scope.getList(0);
+                    }else {
+
+                        window.sessionStorage.setItem(window.myinfo.id + "bankcardscdd_state_code", "");
+                        $scope.state_id = null;
+                        $scope.forms.state_id = null;
+                        // $scope.getList(0);
+                        // console.log($scope.forms);
+                    }
+                };
+
+                // 搜索
+                $scope.searchSubmit = function () {
+                    /*合并对象*/
+                    $scope.forms = Object.assign($scope.searchForms,$scope.forms);
+
+                    $scope.getList(0)
+
+                };
+
+                //清除搜索
+                $scope.clearSearch = function () {
+                    $scope.forms = {};
+                    $scope.searchForms = {};
+
+                    if($scope.state_id){
+                        $scope.forms.state_id = $scope.state_id;
+                    }else {
+                        $scope.forms.state_id = null;
+                    }
+
+                    $scope.forms.size     = "10";
+                    $scope.forms.sort     = "id,desc";
+                    $scope.getList(0);
+                };
+//                $scope.getList = function (page) {
+//
+//                    $scope.loading = true;
+//
+//                    $scope.list = [];
+//
+//                    //var link = "/rest/bankcards/search/listOwnDepartmentAndChildren?sort=lastModifiedAt,desc&size=10&page=" + page;
+//
+//                    //if ($scope.state_code) {
+//                    var link = "/rest/bankcards/search/listStateOwnDepartmentAndChildren?sort=id,desc&stateCode=" + $scope.state_code + "&sort=lastModifiedAt,desc&size=10&page=" + page;
+//                    //}
+//
+//                    entity.getList(link).then(function (resResult) {
+//
+//                        console.log(resResult,'bankcard')
+//                        $scope.loading = false;
+//
+//                        $scope.list = entity.getListActs(resResult._embeddedItems);
+//
+//                        if ($scope.list.length > 0) {
+//                            $scope.pageList = {
+//                                size: resResult.page.size,
+//                                total_elements: resResult.page.totalElements,
+//                                current_page: resResult.page.number,
+//                                num_page: resResult.page.totalPages,
+//                                total_page: resResult.page.totalPages
+//                            };
+//                        }else{
+//                            $scope.pageList = {
+//                                size: 0,
+//                                total_elements: 0,
+//                                current_page: 0,
+//                                num_page: 1,
+//                                total_page: 1
+//                            };
+//                        }
+//
+//                        $rootScope.setPaginator("#bankcard_list_paginator", $scope.pageList, $scope.getList);
+//
+//                    });
+//                };
+
+                //状态筛选
+//                $scope.stateSelect = function (state) {
+//                    $scope.state_code = state.stateCode;
+//                    $scope.getList(0);
+//                };
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="bankcardListController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="vbox">
+            <div class="wrapper b-b clearfix">
+                <form class="form-inline">
+                    <div class="clearfix">
+                        <div class="form-group m-r">
+                            <label for="manager_state" style="width:57px;text-align:right;">状态：</label>
+                            <select ng-model="stateVal"
+                                    id="manager_state"
+                                    class="form-control input-sm" style="width:150px;"
+                                    ng-options="y.label for (x,y) in states"
+                                    ng-change="stateChange(stateVal)"
+                            >
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="bankrecord_name">姓名：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="bankrecord_name"
+                                   ng-model="searchForms.realName">
+                        </div>
+                        <div class="form-group m-r">
+                            <label for="bankrecord_searchSn">银行卡号：</label>
+                            <input type="text" class="form-control input-sm" style="width:150px;" id="bankrecord_searchSn"
+                                   ng-model="searchForms.accountIdentity">
+                        </div>
+                        <div class="pull-right inline">
+                            <button class="btn btn-sm btn-danger btn-addon" ui-sref="auditEntity.form">
+                                <i class="fa fa-star"></i>
+                                新建
+                            </button>
+                        </div>
+                    </div>
+                    <div class="m-t">
+                        <button class="btn btn-sm btn-primary m-r" ng-click="searchSubmit()">
+                            <i class="fa fa-search"></i>
+                            搜索
+                        </button>
+                        <button class="btn btn-sm btn-default m-r" ng-click="clearSearch()">
+                            <i class="fa fa-refresh"></i>
+                            清空
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="row-row">
+                <div class="cell">
+                    <div class="cell-inner">
+                        <div class="wrapper">
+                            <div class="panel panel-default">
+                                <div class="panel-heading" ng-if="!loading && list.length > 0">
+                                    查询结果
+                                </div>
+                                <div ng-if="loading"
+                                     style="position: fixed;top: 50%;right: 50%;margin-left: -15px;margin-top: -15px;">
+                                    <div class="sk-spinner sk-spinner-cube-grid">
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                        <div class="sk-cube"></div>
+                                    </div>
+                                    <div class="text-center m-t">加载中请稍后</div>
+                                </div>
+                                <div class="panel-heading" ng-if="!loading && list.length < 1">
+                                    暂无数据！
+                                </div>
+                                <div ng-if="!loading && list.length > 0">
+                                    <table class="table table-hover b-light" style="border-bottom: none;">
+                                        <thead>
+                                        <tr>
+                                            <th>操作</th>
+                                            <th>持卡人姓名</th>
+                                            <th>银行卡号</th>
+                                            <th>支行名称</th>
+                                            <th>创建时间</th>
+                                            <th>最后修改时间</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr ng-repeat="item in list">
+                                            <td class="v-middle clearfix">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-info btn-xs dropdown-toggle"
+                                                            data-toggle="dropdown">
+                                                        操作 <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a ui-sref="auditEntity.home.profile.info({id:item.id})">详情</a>
+                                                        </li>
+                                                        <li><a ui-sref="auditEntity.form({id:item.id})">编辑</a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.realName }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.accountIdentity }}
+                                            </td>
+
+                                            <td class="v-middle">
+                                                {{ item.branchName }}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.createdAt | datetime}}
+                                            </td>
+                                            <td class="v-middle">
+                                                {{ item.lastModifiedAt | datetime }}
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="wrapper b-t b-light clearfix">
+                <ul id="bankcard_list_paginator" style="margin:2px 0;float: right;"></ul>
+                <small class="m-l-md pull-right text-muted inline m-t-sm m-b-sm m-r">共 {{ pageList.total_elements }} 条，本页共 {{ list.length }} 条
+                </small>
+            </div>
+        </div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

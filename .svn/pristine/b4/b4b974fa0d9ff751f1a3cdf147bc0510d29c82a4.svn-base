@@ -1,0 +1,264 @@
+<script>
+    "use strict";
+    app.controller("baddebtListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                /**/
+                $scope.paymentMaterials = null;
+
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "退出",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+
+                            $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+
+                        });
+                    });
+                };
+
+
+                /*大方法的对象*/
+                $scope.baddebtExcute = {
+
+                    /*一审驳回打开modal*/
+                    "failed": function (profile) {
+                        $("#" + profile.id + "_failed").modal("show");
+                    },
+
+                    /*驳回理由加改变状态*/
+                    "failedSave": function (failedVal, profile) {
+                        if (failedVal) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/baddebts/" + profile.id,
+                                data: {
+                                    act: "failed",
+                                    comment: failedVal
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_failed").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+                            });
+
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+                        }
+                    },
+                    "finish": function (profile) {
+                        $("#" + profile.id + "_finish").modal("show");
+                    },
+                    "finishSave": function (vehiclePrice,storeAmount,vehicleExpense,profile) {
+                        $http({
+                            method: "PATCH",
+                            url: "/rest/baddebts/" + profile.id,
+                            data: {
+                                act: "finish",
+                                vehiclePrice: vehiclePrice,
+                                storeAmount:storeAmount,
+                                vehicleExpense:vehicleExpense
+                            }
+                        }).success(function (resResult) {
+                            $("#" + profile.id + "_finish").modal("hide");
+                            $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+                        });
+                    },
+
+                    "adopt": function (profile) {
+                        $("#" + profile.id + "_adopt").modal("show");
+                    },
+                    "adoptSave": function (applyVal, profile) {
+                        $http({
+                            method: "GET",
+                            url: "/rest/baddebts/" + profile.id
+                        }).success(function (resResult) {
+                            if(applyVal > resResult.applyAmount){
+                                $rootScope.toasterWarning("注意", "输入金额超过申请金额！");
+                            }else {
+                                if (0 < applyVal) {
+
+                                    $http({
+                                        method: "PATCH",
+                                        url: "/rest/baddebts/" + profile.id,
+                                        data: {
+                                            act: "adopt",
+                                            acceptAmount: applyVal
+                                            // notice: profile.serviceUser.id
+                                        }
+                                    }).success(function (resResult) {
+                                        $("#" + profile.id + "_adopt").modal("hide");
+                                        $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+                                    });
+
+                                }else {
+
+                                    $http({
+                                        method: "PATCH",
+                                        url: "/rest/baddebts/" + profile.id,
+                                        data: {
+                                            act: "failed"
+                                        }
+                                    }).success(function (resResult) {
+                                        $("#" + profile.id + "_adopt").modal("hide");
+                                        $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+
+                                    });
+                                }
+                            }
+
+                        });
+
+//                        if (applyVal) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/ordercdds/" + profile.id,
+//                                data: {
+//                                    act: "twoFailed",
+//                                    comment: failedVal
+//                                    // notice: profile.serviceUser.id
+//                                }
+//                            }).success(function (resResult) {
+//                                $("#" + profile.id + "_twoFailed").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+//                                $rootScope.toasterInfo("成功！", "已二审驳回！");
+//                            });
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+//                        }
+                    }
+
+
+//
+//                    /*同意*/
+//                    "adopt": function (profile) {
+//                        console.log(profile)
+//                        swal({
+//                            title: "这条客户信息是否能通过",
+//                            type: "success",
+//                            showCancelButton: true,
+//                            cancelButtonText: "退出",
+//                            confirmButtonText: "同意",
+//                            closeOnConfirm: true
+//                        }, function () {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/baddebts/" + profile.id,
+//                                data: {act: "adopt"}
+//                            }).success(function (resResult) {
+////                                $http({
+////                                    method: "POST",
+////                                    url: "/rest/creditrepayments",
+////                                    data: {
+////                                        act: "create",
+////                                        baddebt : resResult._links.self.href
+////                                    }
+////                                }).success(function (resResult) {
+//
+//                                $state.go("workflowEntity.list", {entity_key: "baddebt"}, {reload: true});
+////                                });
+//                            });
+//                        });
+//
+//                    }
+                };
+
+
+                /*上传文件*/
+                //以下是上传文件的动作详情参考前端框架示例 js/controllers/file-upload.js
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 10;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    console.log(fileItem);
+                    fileItem.actCode = $scope.actCode;
+//                    if (fileItem.file.type !== "application/x-zip-compressed") {
+//
+//                        $rootScope.toasterError("警告！", "审核文件的格式需要为ZIP的压缩文件格式！");
+//
+//                        fileItem.remove();
+//
+//                    } else {
+                    fileItem.formData = [{fileType: "file"}];
+//                    }
+
+//                    $("#audit_zip_file_input").val("");
+
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+
+                    //增加目录结构
+                    response.result.topcategory = "签约合同";
+                    response.result.subcategory = "签约合同";
+
+                    $scope.urlName = response.result.newFileName;
+
+                    $http({
+                        method: "PATCH",
+                        url: "/rest/ordercdds/" + $scope.ordercddId,//这里是关联的实体
+                        data: {
+                            fileObject: response.result,//fileObject是上传完文件后的文件对象
+                            act: "uploadContract"//上传文件的行为
+                        }
+                    }).success(function (data) {
+                        $("#" + $scope.ordercddId + "_upload").modal("hide");
+                        $rootScope.toasterSuccess("成功", "合同上传成功");
+                    });
+
+                }
+
+
+            }
+        ]
+    );
+</script>
+
+
+<div ng-controller="baddebtListModuleController" class="h-full" ui-view></div>

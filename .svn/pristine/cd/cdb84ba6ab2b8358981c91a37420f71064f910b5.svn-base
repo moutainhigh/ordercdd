@@ -1,0 +1,1674 @@
+<script>
+    app.controller("ordercddFormController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity, FileUploader) {
+
+                $scope.form_id = $stateParams.id;
+
+                $scope.form = {};
+
+                /*上传文件大数组*/
+                $scope.uploadVal = [];
+
+                /*上传文件时传入*/
+                $scope.actCode = null;
+
+                /*上传文件夹*/
+                $scope.subcategory = null;
+                $scope.topcategory = null;
+
+                $scope.modalMaxPhoto = null;
+
+                /*所有的上传的行为*/
+                $scope.canActs = [];
+
+                /*附加费用*/
+                $scope.feetypes = [];
+                $scope.forms    = {};
+
+                //还款规则
+                $scope.repaymentMethodCode = "";
+
+                $scope.feetypeProductShow = false;
+                $scope.productShow        = false;
+
+                /*对应的产品*/
+                $scope.productVal  = null;
+                $scope.product     = null;
+                $scope.productList = [];
+
+                /*所有有产品*/
+                $scope.allProductList = [];
+
+
+                //判断是否有订单 如果没有无法保存
+                $scope.ordercddSelf = null;
+
+                //区域JSON
+                $scope.regions = angular.copy(window.regions);
+
+                //默认为第一个
+                $scope.province = $scope.regions.children[0];
+                $scope.cities   = $scope.province.children;
+                $scope.city     = $scope.province.children[0];
+
+
+                /*根据还款规则去获取对应的所有产品*/
+                $scope.getAllProduct = function (val) {
+
+
+                    if (val) {
+                        $scope.productShow = true;
+
+                        $scope.productList = [];
+
+                        angular.forEach($scope.allProductList, function (val1, key1) {
+                            // if (val1.repaymentMethodCode === val) {
+                            //     $scope.productList.push(val1);
+                            // }
+                            //展示有效的产品
+                            if (val1.state.label == '有效') {
+                                $scope.productList.push(val1)
+                            }
+                        });
+                        $scope.repaymentMethodCode = val;
+
+                        /*判断是否已经有销售产品*/
+//                        if ($scope.form.product) {
+
+                        $http({
+                            url: $scope.form._links.product.href,
+                            method: "get"
+                        }).success(function (resResult) {
+                            angular.forEach($scope.productList, function (val2, key2) {
+                                if (resResult.id == val2.id) {
+                                    $scope.productVal = $scope.productList[key2];
+                                } else {
+//                                    $scope.productVal = $scope.productList[0];
+                                }
+                            });
+                            $scope.getProduct($scope.productVal);
+                        });
+
+//                        } else {
+////                            $scope.productVal = $scope.productList[0];
+//                        }
+
+
+                    } else {
+
+                        $scope.feetypeProductShow = false;
+                        $scope.productShow        = false;
+                    }
+                };
+
+                /*获取对应的的产品*/
+                $scope.getProduct = function (val) {
+                    if (val) {
+                        $scope.feetypeProductShow = true;
+                        $scope.product            = val;
+                        $scope.feetypeFunction(val);
+                    } else {
+                        $scope.feetypeProductShow = false;
+                    }
+                };
+
+                /*根据产品获取收费项目*/
+                $scope.feetypeFunction = function (product) {
+
+                    //获取所有费用项目
+                    $scope.feetypes = [];
+                    $scope.forms    = {};
+
+                    entity.getList("rest/feetypes").then(function (resResult1) {
+                        angular.forEach(resResult1._embeddedItems, function (val, key) {
+                            if (val.type == "0") {
+                                $scope.feetypes.push(val)
+                            }
+                        });
+
+                        angular.forEach($scope.feetypes, function (val, key) {
+//                            console.log(val);
+                            $scope.forms[val.feetypeCode]             = {};
+                            $scope.forms[val.feetypeCode].isPeriod    = "false";
+                            $scope.forms[val.feetypeCode].isRefund    = "false";
+                            $scope.forms[val.feetypeCode].isRepayment = "true";
+                        });
+
+                        $http({
+                            url: $scope.form._links.feebackups.href,
+                            method: "GET"
+                        }).success(function (resResult) {
+
+                            if (resResult._embedded.feebackups.length>0) {
+
+                                //获取自己已经添加的收费项目
+                                angular.forEach(resResult._embedded.feebackups, function (val, key) {
+
+                                    if (val.backupsource == "STOREFEE") {
+
+                                        $scope.forms[val.feetypeCode]        = val;
+                                        $scope.forms[val.feetypeCode].update = true;
+
+                                        $scope.forms[val.feetypeCode].isPeriod = val.isPeriod.toString();
+                                        $scope.forms[val.feetypeCode].isRefund = val.isRefund.toString();
+
+                                        if (val.feeRate) {
+                                            $scope.forms[val.feetypeCode].isRepayment = "true";
+                                            $scope.forms[val.feetypeCode].feeVal      = val.feeRate;
+                                        } else if (val.feeAmount) {
+                                            $scope.forms[val.feetypeCode].isRepayment = "false";
+                                            $scope.forms[val.feetypeCode].feeVal      = val.feeAmount;
+                                        }
+
+                                    }
+
+                                });
+
+
+                            } else {
+
+                                //获取自己已经添加的收费项目
+                                entity.getList("rest/products/" + product.id, ["productstorefees"]).then(function (resResult2) {
+                                    angular.forEach(resResult2.productstorefees._embeddedItems, function (val, key) {
+//                                    val.feeRate = val.feeRate * 100;
+                                        $scope.forms[val.feetypeCode]          = val;
+                                        $scope.forms[val.feetypeCode].isPeriod = val.isPeriod.toString();
+                                        $scope.forms[val.feetypeCode].isRefund = val.isRefund.toString();
+
+
+                                        if (val.feeRate) {
+                                            $scope.forms[val.feetypeCode].isRepayment = "true";
+                                            $scope.forms[val.feetypeCode].feeVal      = val.feeRate;
+                                        } else if (val.feeAmount) {
+                                            $scope.forms[val.feetypeCode].isRepayment = "false";
+                                            $scope.forms[val.feetypeCode].feeVal      = val.feeAmount;
+                                        }
+
+                                    });
+                                });
+                            }
+                        });
+
+
+
+                    });
+                };
+
+
+                /*
+               * 初始化
+               * */
+                $scope.into = function () {
+
+
+                    entity.getDetail("rest/ordercdds/" + $stateParams.id, ["product", "state", "files", "workflow", "feebackups"]).then(function (resResult) {
+
+                        $scope.form = {};
+
+
+                        /*上传文件大数组*/
+                        $scope.uploadVal = [];
+
+                        /*上传文件时传入*/
+                        $scope.actCode = null;
+
+                        /*上传文件夹*/
+                        $scope.subcategory = null;
+                        $scope.topcategory = null;
+
+                        $scope.modalMaxPhoto = null;
+
+                        /*所有的上传的行为*/
+                        $scope.canActs = [];
+
+
+                        $scope.form = resResult;
+                        console.log($scope.form)
+                        // 省市二级
+                        if ($scope.form.vehicleProvince !== null && $scope.form.vehicleCity !== null) {
+                            $scope.province.text = $scope.form.vehicleProvince;
+                            $scope.city.text     = $scope.form.vehicleCity;
+                        }
+
+                        if ($scope.form.repaymentMethodCode) {
+                            $scope.repaymentMethodCode = $scope.form.repaymentMethodCode;
+                        } else {
+                            $scope.repaymentMethodCode = "BEFORE_INTEREST_AFTER_PRINCIPAL";
+                        }
+
+                        /*所有有产品*/
+                        $scope.allProductList = [];
+
+
+                        entity.getList("/rest/departments/" + $rootScope.myinfo.department.id + "/products?sort=lastModifiedAt,desc", ["repaymentAccount", "capitalproduct", "state"]).then(function (resResult1) {
+//                            if (resResult1) {
+//                                $scope.allProductList = resResult1._embeddedItems;
+//                                $scope.getAllProduct($scope.repaymentMethodCode);
+//                                console.log("allProductList", $scope.allProductList);
+//                            }
+
+
+                            angular.forEach(resResult1._embeddedItems, function (val, key) {
+                                if (val.state.stateCode === "ENABLED") {
+                                    $scope.allProductList.push(val)
+                                }
+                            })
+//                            if (resResult1) {
+//                                $scope.allProductList = resResult1._embeddedItems;
+                            $scope.getAllProduct($scope.repaymentMethodCode);
+//                            }
+                        });
+
+
+                        $scope.ordercddSelf = resResult._links.self.href;
+
+                        angular.forEach($scope.form.currentUserCanActList, function (val, key) {
+                            if (val.actGroup === "FILE_OPERATE") {
+                                $scope.canActs.push(val);
+                            }
+                        });
+
+                        $scope.canActs = $scope.canActs.sort(function (a, b) {
+                            return a.sort - b.sort;
+                        });
+
+                        angular.forEach($scope.canActs, function (val, key) {
+                            val.actPhoto = [];
+                        });
+
+                        angular.forEach($scope.form.files._embeddedItems, function (val, key) {
+                            angular.forEach($scope.canActs, function (val1, key1) {
+                                if (val.actCode === val1.actCode) {
+                                    val1.actPhoto.push(val)
+                                }
+                            });
+                        });
+                    });
+                };
+
+                $scope.into();
+
+
+                $scope.productChargeSave = function () {
+
+                    var form    = {};
+                    var feeList = [];
+
+//                    console.log($scope.forms)
+
+//                        <option value="true">按比例收费</option>
+//                        <option value="false">固定收费</option>
+
+                    angular.forEach($scope.forms, function (val, key) {
+                        if (val.feeVal) {
+                            if (val.isRepayment === "true") {
+                                val.feeRate   = (val.feeVal).toString();
+                                val.feeAmount = null;
+                            } else {
+                                val.feeAmount = (val.feeVal).toString();
+                                val.feeRate   = null;
+                            }
+                            if (val.fee) {
+                                val.feetype = val.fee.id.toString();
+                            }
+                            val.feetypeCode = key;
+
+                            feeList.push(val)
+
+                        }
+                    })
+
+//                    angular.forEach($scope.forms, function (val, key) {
+//                        if ((val.feeAmount && val.feeAmount >= 0) || (val.feeRate && val.feeRate >= 0)) {
+//                            if (val.feeAmount && val.feeRate) {
+//                                val.feeAmount = null;
+//                            }
+//                            if (val.feeRate) {
+//                                val.feeRate = (val.feeRate).toString();
+//                            } else if (val.feeRate == 0) {
+//                                val.feeRate = null
+//                            }
+//                            if (val.feeAmount) {
+//                                val.feeAmount = val.feeAmount.toString();
+//                            } else if (val.feeAmount == 0) {
+//                                val.feeAmount = null
+//                            }
+//                            console.log(val)
+//                            if (val.fee) {
+//                                val.feetype = val.fee.id.toString();
+//                            }
+//
+//                            val.feetypeCode = key;
+//
+//                            feeList.push(val)
+//                        }
+//                    });
+//
+                    form.fees = [];
+                    form.fees = feeList;
+
+                    form.act                 = "savefeebackup";
+                    form.product             = $scope.product._links.self.href;
+                    form.repaymentMethodCode = $scope.repaymentMethodCode;
+
+                    $http({
+                        url: $scope.form._links.self.href,
+                        method: "PATCH",
+                        data: form
+                    }).success(function (resResult) {
+//                        console.log($scope.form);
+
+                        $state.go("workflowEntity.home.profile.info", {
+                            id: $scope.form.id,
+                            entity_key: "ordercdd"
+                        }, {reload: true});
+                        $rootScope.toasterSuccess("成功！", "销售产品保存成功！");
+                    });
+
+
+                };
+
+//                $scope.productChargeDelete = function (fee) {
+//                    var id = $scope.forms[fee.feetypeCode].id;
+//                    if (fee) {
+//                        if ($scope.form.feebackups._embeddedItems.length > 0) {
+//                            $rootScope.sweetConfirm({
+//                                title: "提示",
+//                                text: "你是否要删除这条收费项目！",
+//                                type: "warning",
+//                                callback: function () {
+//                                    $scope.$apply(function () {
+//                                        $scope.forms;
+//                                        delete $scope.forms[fee.feetypeCode];
+//                                    });
+//                                    $http({
+//                                        method: "DELETE",
+//                                        url: "rest/feebackups/" + id
+//                                    }).success(function (resResult) {
+//                                        $rootScope.toasterInfo("成功！", "删除成功");
+////                                        $state.reload();
+//                                    });
+//                                }
+//                            })
+//                        } else {
+//                            $rootScope.sweetConfirm({
+//                                title: "提示",
+//                                text: "你是否要删除这条收费项目！",
+//                                type: "warning",
+//                                callback: function () {
+////                                    delete $scope.forms[fee.feetypeCode];
+//                                    $scope.$apply(function () {
+//                                        $scope.forms;
+//                                        delete $scope.forms[fee.feetypeCode];
+//                                    })
+//                                }
+//                            })
+//                        }
+//                    }
+//                };
+
+
+//                $scope.getAllProduct($scope.repaymentMethodCode);
+
+                /*
+                * 保存操作
+                * */
+                $scope.ordercddSave = function () {
+
+                    $scope.steps.step2 = true;
+
+                    delete $scope.form.workflow;
+                    delete $scope.form.state;
+                    delete $scope.form.files;
+                    delete $scope.form.product;
+
+                    // 省市二级
+                    $scope.form.vehicleProvince = $scope.province.text;
+                    $scope.form.vehicleCity     = $scope.city.text;
+
+//                    if (!(/(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/.test( $scope.form.applyIdentityNo))){
+//                        $rootScope.toasterError("错误","请输入正确的身份证号！")
+//                        return;
+//                    }
+
+                    if (entity.getRegular("identity", $scope.form.applyIdentityNo)) {
+                        $rootScope.toasterError("错误", "请输入正确的身份证号！");
+                        return;
+                    }
+
+                    if (entity.getRegular("mobile", $scope.form.applyMobile)) {
+                        $rootScope.toasterError("错误", "不是完整的11位手机号或者正确的手机号前七位！")
+                        return;
+                    }
+
+
+                    $scope.form.act = "update";
+                    $http({
+                        url: $scope.form._links.self.href,
+                        method: "PATCH",
+                        data: $scope.form
+                    }).success(function (resResult) {
+
+//                        $state.go("workflowEntity.home.profile.info", {
+//                            id: resResult.id,
+//                            entity_key: "ordercdd"
+//                        }, {reload: true});
+
+                        $rootScope.toasterSuccess("成功！", "基础信息保存成功！");
+                    });
+                };
+
+                /*
+                * 上传照片
+                * */
+                $scope.uploadPhoto = function (act) {
+
+                    $scope.actCode = act.actCode;
+
+                    $scope.subcategory = act.subcategory;
+                    $scope.topcategory = act.topcategory;
+
+                    $scope.uploader.clearQueue();
+                    $("#ordercdd_upload").modal("show");
+                };
+
+
+                /*
+                * 查看一张图片
+                * */
+                $scope.uploadOnePhoto = function (value) {
+                    $scope.modalMaxPhoto = value;
+                    $("#ordercdd_upload_one_photo").modal("show");
+                };
+
+                /*
+                * 删除图片
+                * */
+                $scope.photoChargeDelete = function (fee) {
+                    if (fee) {
+                        $rootScope.sweetConfirm({
+                            title: "提示",
+                            text: "你是否要删除这张图片！",
+                            type: "warning",
+                            callback: function () {
+                                $http({
+                                    method: "GET",
+                                    url: "/rest/ordercdds/" + $scope.form_id + "/files"
+                                }).success(function (resResult) {
+                                    angular.forEach(resResult._embedded.ordercddFiles, function (val, key) {
+                                        if (val.newFileName == fee.newFileName) {
+                                            $http({
+                                                method: "DELETE",
+//                                                url: "/rest/ordercdds/" + $scope.form_id + "/files/" + val.id
+                                                url: "/rest/ordercddFiles/" + val.id + "/entity/" + $scope.form_id
+                                            }).success(function (resResult) {
+                                                $("#ordercdd_upload_one_photo").modal("hide");
+                                                $scope.into();
+                                                $rootScope.toasterInfo("成功！", "删除成功");
+                                            });
+                                        }
+                                    })
+                                });
+
+                            }
+                        })
+                    }
+                };
+
+
+                /*上传文件*/
+                //以下是上传文件的动作详情参考前端框架示例 js/controllers/file-upload.js
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 30;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    if (fileItem.file.type.indexOf("image") !== -1) {
+                        fileItem.formData    = [{fileType: "image"}];
+                        fileItem.actCode     = $scope.actCode;
+                        fileItem.subcategory = $scope.subcategory;
+                        fileItem.topcategory = $scope.topcategory;
+
+//                        fileItem.formData = [{fileType: "file"}];
+
+                    } else {
+                        $rootScope.toasterError("警告！", "只能上传图片格式请重新选择！");
+                        fileItem.remove();
+
+//                        fileItem.formData = [{fileType: "file"}]
+                    }
+
+
+//                    $("#audit_zip_file_input").val("");
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    response.result.actCode     = fileItem.actCode;
+                    response.result.subcategory = fileItem.subcategory;
+                    response.result.topcategory = fileItem.topcategory;
+
+                    angular.forEach($scope.canActs, function (val, key) {
+                        if (val.actCode == fileItem.actCode) {
+                            val.actPhoto.push(response.result);
+                        }
+                    });
+
+                    $http({
+                        method: "PATCH",
+                        url: "rest/ordercdds/" + $scope.form_id,//这里是关联的实体
+                        data: {
+                            fileObject: response.result,//fileObject是上传完文件后的文件对象
+                            act: fileItem.actCode//上传文件的行为
+                        }
+                    }).success(function (data) {
+                        $rootScope.toasterSuccess("上传成功！", $scope.subcategory + "：" + fileItem.file.name + " 上传成功！");
+                    });
+
+
+                };
+
+                $scope.surveyDateToday = function () {
+                    $scope.form.applyAnnualSurveyMaturity = new Date();
+                };
+
+                $scope.surveyDateClear = function () {
+                    $scope.form.applyAnnualSurveyMaturity = null;
+                };
+
+                $scope.policyDateToday = function () {
+                    $scope.form.applyAnnualPolicyMaturity = new Date();
+                };
+
+                $scope.policyDateClear = function () {
+                    $scope.form.applyAnnualPolicyMaturity = null;
+                };
+
+                $scope.vehicleDateToday = function () {
+                    $scope.form.vehicleDate = new Date();
+                };
+
+                $scope.vehicleDateClear = function () {
+                    $scope.form.vehicleDate = null;
+                };
+
+                $scope.vehicleDatepicker = {
+                    surveyOpened: false,
+                    policyOpened: false,
+                    vehicleOpened: false
+                };
+
+                $scope.openSurvey = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.vehicleDatepicker = {
+                        surveyOpened: true,
+                        policyOpened: false,
+                        vehicleOpened: false
+                    };
+                };
+
+                $scope.openPolicy = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.vehicleDatepicker = {
+                        surveyOpened: false,
+                        policyOpened: true,
+                        vehicleOpened: false
+                    };
+                };
+
+                $scope.openVehicle = function ($event) {
+                    $event.preventDefault();
+                    $event.stopPropagation();
+
+                    $scope.vehicleDatepicker = {
+                        surveyOpened: false,
+                        policyOpened: false,
+                        vehicleOpened: true
+                    };
+                };
+
+                $scope.dateOptions = {
+                    formatYear: "yy",
+                    startingDay: 1,
+                    class: "datepicker",
+                    showWeeks: false
+                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="ordercddFormController">
+    <!-- column -->
+    <div class="col">
+        <div class="wrapper b-b b-light">
+            <div class="font-thin h4">
+                <span translate="ordercdd.self.label"></span>{{ form._links?"修改":"新建" }}
+            </div>
+        </div>
+
+        <div class="wrapper">
+            <tabset class="tab-container"
+                    ng-init="steps={percent:50, step1:true, step2:false,step3:false}">
+                <tab heading="1.基础信息" active="steps.step1" select="steps.percent=50">
+                    <progressbar value="steps.percent" class="progress-xs" type="success"></progressbar>
+
+                    <form name="step1" class="form-horizontal form-validation">
+
+                        <div class="wrapper ng-scope">
+                            <div class="row">
+                                <div class="col-xs-12 col-sm-12">
+                                    <div class="panel panel-info">
+                                        <div class="panel-heading m-b">
+                                            个人信息
+                                        </div>
+                                        <table style="width: 100%;table-layout: fixed">
+                                            <tr class="v-top">
+                                                <td style="width: 50%">
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.realName.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   id="ordercdd_realName"
+                                                                   name="ordercdd_realName"
+                                                                   autocomplete="off"
+                                                                   required
+                                                                   ng-model="form.realName">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_realName.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;姓名为必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style="width: 50%">
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyMobile.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   autocomplete="off"
+                                                                   id="ordercdd_applyMobile"
+                                                                   name="ordercdd_applyMobile"
+                                                                   disabled
+                                                                   required
+                                                                   pattern="^(\+\d{2,3})?1(3|4|7|5|8)([0-9]{9})$"
+                                                                   ng-model="form.applyMobile">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyMobile.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的手机号
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="v-top">
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyIdentityNo.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input class="form-control"
+                                                                   ng-model="form.applyIdentityNo"
+                                                                   id="ordercdd_applyIdentityNo"
+                                                                   name="ordercdd_applyIdentityNo"
+                                                                   required
+                                                                   pattern="(^\d{18}$)|(^\d{17}(\d|X|x)$)"
+                                                                   autocomplete="off"
+                                                                   type="text">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyIdentityNo.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的身份证号
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyEnterpriseProvince.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   id="ordercdd_applyEnterpriseProvince"
+                                                                   name="ordercdd_applyEnterpriseProvince"
+                                                                   ng-model="form.applyEnterpriseProvince"
+                                                                   required>
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyEnterpriseProvince.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;服务城市为必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="v-top">
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyBankCardBranch.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input class="form-control"
+                                                                   ng-model="form.applyBankCardBranch"
+                                                                   id="ordercdd_applyBankCardBranch"
+                                                                   name="ordercdd_applyBankCardBranch"
+                                                                   type="text"
+                                                                   required>
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyBankCardBranch.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;储蓄卡支行为必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyBankCard.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   id="ordercdd_applyBankCard"
+                                                                   name="ordercdd_applyBankCard"
+                                                                   ng-model="form.applyBankCard"
+                                                                   required
+                                                                   pattern="^[0-9]{19}$">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyBankCard.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;储蓄卡卡号为19位数字，且必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="v-top">
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyAmount.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   id="ordercdd_applyAmount"
+                                                                   name="ordercdd_applyAmount"
+                                                                   ng-model="form.applyAmount"
+                                                                   required
+                                                                   pattern="^[0-9]+.?[0-9]*$">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyAmount.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;借款总额为数字，且必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyPlateNumber.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   id="ordercdd_applyPlateNumber"
+                                                                   name="ordercdd_applyPlateNumber"
+                                                                   ng-model="form.applyPlateNumber"
+                                                                   required
+                                                                   pattern="^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-HJ-NP-Z]{1}[A-HJ-NP-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyPlateNumber.$invalid">
+                                                                  <i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的车牌号,字母为大写字母
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="v-top">
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span> <span
+                                                                translate="ordercdd.applyVehicleModel.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <input type="text"
+                                                                   class="form-control"
+                                                                   ng-model="form.applyVehicleModel"
+                                                                   id="ordercdd_applyVehicleModel"
+                                                                   name="ordercdd_applyVehicleModel"
+                                                                   required
+                                                                   pattern="(?!^\d+$)(?!^[a-zA-Z]+$)[0-9a-zA-Z]{0,100}">
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_applyVehicleModel.$invalid">
+                                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;车辆型号为数字和字母的组合，此项必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span>
+                                                            <span translate="ordercdd.applyRegisterReigionName.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <two-region-select></two-region-select>
+                                                        </div>
+                                                        <!--<div class="col-xs-10">-->
+                                                        <!--<input type="text"-->
+                                                        <!--class="form-control"-->
+                                                        <!--ng-model="form.applyRegisterReigionName"-->
+                                                        <!--id="ordercdd_applyRegisterReigionName"-->
+                                                        <!--name="ordercdd_applyRegisterReigionName"-->
+                                                        <!--required>-->
+                                                        <!--<span class="help-block text-danger"-->
+                                                        <!--ng-show="step1.ordercdd_applyRegisterReigionName.$invalid">-->
+                                                        <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;车辆区域为必填-->
+                                                        <!--</span>-->
+                                                        <!--</div>-->
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="v-top">
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span>
+                                                            <span translate="ordercdd.applyAnnualSurveyMaturity.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <div class="input-group">
+                                                                <input type="text"
+                                                                       class="form-control"
+                                                                       name="ordercdd_surveyDate"
+                                                                       disabled
+                                                                       datepicker-popup="yyyy-MM-dd"
+                                                                       ng-model="form.applyAnnualSurveyMaturity"
+                                                                       is-open="vehicleDatepicker.surveyOpened"
+                                                                       datepicker-options="dateOptions"
+                                                                       required
+                                                                       current-text="今天"
+                                                                       clear-text="清除"
+                                                                       close-text="关闭"/>
+                                                                <span class="input-group-btn">
+                                                                    <button type="button" class="btn btn-default"
+                                                                            ng-click="openSurvey($event)">
+                                                                        <i class="fa fa-calendar"></i>
+                                                                    </button>
+                                                                </span>
+                                                            </div>
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_surveyDate.$invalid">
+                                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;保单到期日必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span>
+                                                            <span translate="ordercdd.applyAnnualPolicyMaturity.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <div class="input-group">
+                                                                <input type="text"
+                                                                       class="form-control"
+                                                                       name="ordercdd_policyDate"
+                                                                       disabled
+                                                                       datepicker-popup="yyyy-MM-dd"
+                                                                       ng-model="form.applyAnnualPolicyMaturity"
+                                                                       is-open="vehicleDatepicker.policyOpened"
+                                                                       datepicker-options="dateOptions"
+                                                                       required
+                                                                       current-text="今天"
+                                                                       clear-text="清除"
+                                                                       close-text="关闭"/>
+                                                                <span class="input-group-btn">
+                                                                    <button type="button" class="btn btn-default"
+                                                                            ng-click="openPolicy($event)">
+                                                                        <i class="fa fa-calendar"></i>
+                                                                    </button>
+                                                                </span>
+                                                            </div>
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_policyDate.$invalid">
+                                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;保单到期日必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="v-top">
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span>
+                                                            <span translate="ordercdd.vehicleDate.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <div class="input-group">
+                                                                <input type="text"
+                                                                       class="form-control"
+                                                                       name="ordercdd_vehicleDate"
+                                                                       disabled
+                                                                       datepicker-popup="yyyy-MM"
+                                                                       ng-model="form.vehicleDate"
+                                                                       is-open="vehicleDatepicker.vehicleOpened"
+                                                                       datepicker-options="dateOptions"
+                                                                       required
+                                                                       current-text="今天"
+                                                                       clear-text="清除"
+                                                                       close-text="关闭"/>
+                                                                <span class="input-group-btn">
+                                                                    <button type="button" class="btn btn-default"
+                                                                            ng-click="openVehicle($event)">
+                                                                        <i class="fa fa-calendar"></i>
+                                                                    </button>
+                                                                </span>
+                                                            </div>
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_vehicleDate.$invalid">
+                                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;车辆年份必填
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="form-group padder">
+                                                        <label class="col-sm-2 control-label">
+                                                            <span class="text-danger">*</span>
+                                                            <span translate="ordercdd.vehicleKm.label"></span>
+                                                        </label>
+                                                        <div class="col-xs-10">
+                                                            <div class="input-group">
+                                                                <input type="text"
+                                                                       class="form-control"
+                                                                       id="ordercdd_vehicleKm"
+                                                                       name="ordercdd_vehicleKm"
+                                                                       ng-model="form.vehicleKm"
+                                                                       ng-maxlength="10"
+                                                                       pattern="^[0-9]+([.]{1}[0-9]+){0,1}$"
+                                                                       required
+                                                                >
+
+                                                                <span class="input-group-addon">万公里</span>
+                                                            </div>
+                                                            <span class="help-block text-danger"
+                                                                  ng-show="step1.ordercdd_vehicleKm.$invalid">
+                                                                <i class="fa fa-exclamation-circle text-danger"></i>&ensp;必须填数字且不超过10位数字
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.sex.label"></label>-->
+                                        <!--<div class="col-xs-10 m-t-xs">-->
+                                        <!--<label class="i-checks m-r-sm">-->
+                                        <!--<input type="radio" value="1" name="ordercddSelectGender"-->
+                                        <!--ng-model="form.sex">-->
+                                        <!--<i></i>-->
+                                        <!--男-->
+                                        <!--</label>-->
+                                        <!--<label class="i-checks m-r-sm">-->
+                                        <!--<input type="radio" value="0" name="ordercddSelectGender"-->
+                                        <!--ng-model="form.sex">-->
+                                        <!--<i></i>-->
+                                        <!--女-->
+                                        <!--</label>-->
+
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.maritalStatus.self.label"></label>-->
+                                        <!--<div class="col-xs-10 m-t-xs">-->
+                                        <!--<label class="i-checks m-r-sm">-->
+                                        <!--<input type="radio" value="MARRIED" name="ordercddSelectMarital"-->
+                                        <!--ng-model="form.maritalStatus">-->
+                                        <!--<i></i>-->
+                                        <!--已婚-->
+                                        <!--</label>-->
+                                        <!--<label class="i-checks m-r-sm">-->
+                                        <!--<input type="radio" value="WIDOWED" name="ordercddSelectMarital"-->
+                                        <!--ng-model="form.maritalStatus">-->
+                                        <!--<i></i>-->
+                                        <!--丧偶-->
+                                        <!--</label>-->
+                                        <!--<label class="i-checks m-r-sm">-->
+                                        <!--<input type="radio" value="DIVORCE" name="ordercddSelectMarital"-->
+                                        <!--ng-model="form.maritalStatus">-->
+                                        <!--<i></i>-->
+                                        <!--离异-->
+                                        <!--</label>-->
+                                        <!--<label class="i-checks m-r-sm">-->
+                                        <!--<input type="radio" value="UNMARRIED" name="ordercddSelectMarital"-->
+                                        <!--ng-model="form.maritalStatus">-->
+                                        <!--<i></i>-->
+                                        <!--未婚-->
+                                        <!--</label>-->
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.email.label"></label>-->
+                                        <!--<div class="col-xs-10">-->
+                                        <!--<input class="form-control"-->
+                                        <!--type="email"-->
+                                        <!--ng-model="form.email">-->
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.personalAddress.label"></label>-->
+                                        <!--<div class="col-xs-10">-->
+                                        <!--<input class="form-control"-->
+                                        <!--ng-model="form.personalAddress">-->
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.companyName.label"></label>-->
+                                        <!--<div class="col-xs-10">-->
+                                        <!--<input class="form-control"-->
+                                        <!--ng-model="form.companyName">-->
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.companyTelephone.label"></label>-->
+                                        <!--<div class="col-xs-10">-->
+                                        <!--<input class="form-control"-->
+                                        <!--ng-model="form.companyTelephone">-->
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+
+                                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                                        <!--<div class="form-group padder">-->
+                                        <!--<label class="col-sm-2 control-label"-->
+                                        <!--translate="ordercdd.companyAddress.label"></label>-->
+                                        <!--<div class="col-xs-10">-->
+                                        <!--<input class="form-control"-->
+                                        <!--ng-model="form.companyAddress">-->
+                                        <!--</div>-->
+                                        <!--</div>-->
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!--<div class="wrapper ng-scope">-->
+                        <!--<div class="row">-->
+                        <!--<div class="col-xs-12 col-sm-12">-->
+                        <!--<div class="panel panel-info">-->
+                        <!--<div class="panel-heading m-b">-->
+                        <!--贷款信息-->
+                        <!--</div>-->
+                        <!--<div class="form-group padder">-->
+                        <!--<label class="col-sm-2 control-label">-->
+                        <!--<span class="text-danger">*</span> <span-->
+                        <!--translate="ordercdd.applyAmount.label"></span>-->
+                        <!--</label>-->
+                        <!--<div class="col-xs-10">-->
+                        <!--<input type="text"-->
+                        <!--class="form-control"-->
+                        <!--id="ordercdd_applyAmount"-->
+                        <!--name="ordercdd_applyAmount"-->
+                        <!--ng-model="form.applyAmount"-->
+                        <!--required-->
+                        <!--pattern="^[0-9]+.?[0-9]*$">-->
+                        <!--<span class="help-block text-danger"-->
+                        <!--ng-show="step1.ordercdd_applyAmount.$invalid">-->
+                        <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;借款总额为数字，且必填-->
+                        <!--</span>-->
+                        <!--</div>-->
+                        <!--</div>-->
+
+                        <!--&lt;!&ndash;<div class="line line-dashed b-b line-lg"></div>&ndash;&gt;-->
+                        <!--&lt;!&ndash;<div class="form-group padder">&ndash;&gt;-->
+                        <!--&lt;!&ndash;<label class="col-sm-2 control-label">&ndash;&gt;-->
+                        <!--&lt;!&ndash;<span class="text-danger">*</span> <span&ndash;&gt;-->
+                        <!--&lt;!&ndash;translate="ordercdd.applyPeriodNumber.label"></span>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</label>&ndash;&gt;-->
+                        <!--&lt;!&ndash;<div class="col-xs-10">&ndash;&gt;-->
+                        <!--&lt;!&ndash;<input type="text"&ndash;&gt;-->
+                        <!--&lt;!&ndash;class="form-control"&ndash;&gt;-->
+                        <!--&lt;!&ndash;id="ordercdd_applyPeriodNumber"&ndash;&gt;-->
+                        <!--&lt;!&ndash;name="ordercdd_applyPeriodNumber"&ndash;&gt;-->
+                        <!--&lt;!&ndash;ng-model="form.applyPeriodNumber"&ndash;&gt;-->
+                        <!--&lt;!&ndash;required&ndash;&gt;-->
+                        <!--&lt;!&ndash;pattern="^[0-9]+.?[0-9]*$">&ndash;&gt;-->
+                        <!--&lt;!&ndash;<span class="help-block text-danger"&ndash;&gt;-->
+                        <!--&lt;!&ndash;ng-show="step1.ordercdd_applyPeriodNumber.$invalid">&ndash;&gt;-->
+                        <!--&lt;!&ndash;<i class="fa fa-exclamation-circle text-danger"></i>&ensp;分期数为数字，且必填&ndash;&gt;-->
+                        <!--&lt;!&ndash;</span>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</div>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</div>&ndash;&gt;-->
+
+                        <!--</div>-->
+                        <!--</div>-->
+                        <!--</div>-->
+                        <!--</div>-->
+
+                        <!--<div class="wrapper ng-scope">-->
+                        <!--<div class="row">-->
+                        <!--<div class="col-xs-12 col-sm-12">-->
+                        <!--<div class="panel panel-info">-->
+                        <!--<div class="panel-heading m-b">-->
+                        <!--车辆信息-->
+                        <!--</div>-->
+
+                        <!--<div class="line line-dashed b-b line-lg"></div>-->
+                        <!--<div class="form-group padder">-->
+                        <!--<label class="col-sm-2 control-label">-->
+                        <!--&lt;!&ndash;<span class="text-danger">*</span>&ndash;&gt;-->
+                        <!--<span translate="ordercdd.applyAnnualSurveyMaturity.label"></span>-->
+                        <!--</label>-->
+                        <!--<div class="col-xs-10">-->
+                        <!--<input class="form-control"-->
+                        <!--name="ordercdd_applyAnnualSurveyMaturity"-->
+                        <!--placeholder="例如1949-10-01"-->
+                        <!--ng-model="form.applyAnnualSurveyMaturity"-->
+
+                        <!--pattern="^(?:(?!0000)[0-9]{4}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1[0-9]|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00)-02-29)$">-->
+                        <!--<span class="help-block text-danger"-->
+                        <!--ng-show="step1.ordercdd_applyAnnualSurveyMaturity.$invalid">-->
+                        <!--<i class="fa fa-exclamation-circle text-danger"></i>&ensp;请输入正确的格式如1949-10-01，此项必填-->
+                        <!--</span>-->
+                        <!--</div>-->
+                        <!--</div>-->
+
+                        <!--</div>-->
+                        <!--</div>-->
+                        <!--</div>-->
+                        <!--</div>-->
+                        <div class="line line-dashed b-b line-lg pull-in "></div>
+                        <div class="form-group">
+                            <div class="col-xs-10 col-xs-offset-2">
+                                <button ui-sref="workflowEntity.home.profile.info({id:id,entity_key:'ordercdd'})"
+                                        class="btn btn-default btn-rounded">
+                                    返回
+                                </button>
+                                <!--<button ng-if="!form._links"-->
+                                <!--ui-sref="workflowEntity.list({entity_key:'ordercdd',workflow_id:form.workflow.id})"-->
+                                <!--class="btn btn-default btn-rounded">-->
+                                <!--返回-->
+                                <!--</button>-->
+                                <button type="submit" ng-disabled="step1.$invalid"
+                                        class="btn btn-default btn-rounded" ng-click="ordercddSave()">基础信息保存并下一步
+                                </button>
+
+                                <!--<button type="submit" ng-disabled="step1.$invalid"-->
+                                <!--class="btn btn-default btn-rounded" ng-click="steps.step2=true">下一步-->
+                                <!--</button>-->
+                            </div>
+                        </div>
+                    </form>
+                </tab>
+
+
+                <tab heading="2.图片上传" disabled="step1.$invalid" active="steps.step2"
+                     select="steps.percent=50">
+                    <form name="step2" class="form-horizontal form-validation">
+                        <!--<p class="m-b">图片上传</p>-->
+                        <progressbar value="steps.percent" class="progress-xs" type="success"></progressbar>
+                        <div class="col-md-6" ng-repeat="act in canActs">
+                            <label class="col-xs-2 control-label">{{ act.label }}</label>
+                            <div class="col-xs-10">
+                                <!--<span class="inline upload-photo-img m-r-xs m-t-xs"-->
+                                <!--ng-repeat="photo in uploadVal"-->
+                                <!--ng-click="uploadOnePhoto(photo[act.actCode])">-->
+                                <!--<img class="upload-img "-->
+                                <!--ng-if="photo.actCode=act.actCode?true:false"-->
+                                <!--ng-src="http://files.xiaojinpingtai.com/{{  photo[act.actCode].result.newFileName }}"-->
+                                <!--alt="">-->
+                                <!--</span>-->
+                                <span class="inline upload-photo-img m-r-xs m-t-xs"
+                                      ng-repeat="photo in act.actPhoto"
+                                      ng-click="uploadOnePhoto(photo)">
+                                                <img class="upload-img "
+                                                     ng-src="http://files.xiaojinpingtai.com/{{  photo.newFileName }}"
+                                                     alt="">
+                                </span>
+                                <span class="inline upload-photo m-t-xs" ng-click="uploadPhoto(act)">
+                                    <!--<span class="block font-24">{{ act.label }}</span>-->
+                                    <i class="fa fa-cloud-upload fa-4x" aria-hidden="true"></i>
+                                </span>
+                            </div>
+                        </div>
+
+
+                        <div class="line line-dashed b-b line-lg pull-in wrapper"></div>
+                        <div class="form-group">
+                            <div class="col-xs-2"></div>
+                            <div class="col-xs-10">
+                                <button type="button" class="btn btn-default btn-rounded m-r-xs"
+                                        ng-click="steps.step1=true">上一步
+                                </button>
+                                <button type="submit"
+                                        class="btn btn-default btn-rounded" ng-click="steps.step3=true">下一步
+                                </button>
+                            </div>
+
+                        </div>
+                    </form>
+                </tab>
+
+
+                <tab heading="3.匹配销售产品" disabled="step2.$invalid" active="steps.step3"
+                     select="steps.percent=50">
+                    <form name="step2" class="form-horizontal form-validation">
+                        <progressbar value="steps.percent" class="progress-xs" type="success"></progressbar>
+
+                        <div class="wrapper ng-scope">
+                            <div class="row">
+                                <div class="col-xs-12 col-sm-12">
+                                    <div class="panel panel-info">
+                                        <div class="panel-heading m-b">
+                                            销售产品
+                                        </div>
+                                        <div class="panel-body">
+                                            <div class="form-group">
+                                                <div class="col-sm-5 ">
+                                                    <select class="form-control m-b"
+                                                            ng-model="repaymentMethodCode"
+                                                            ng-change="getAllProduct(repaymentMethodCode)">
+                                                        <!--<option value="AVERAGE_CAPITAL">等额本金</option>-->
+                                                        <!--<option value="AVERAGE_CAPITAL_PLUS_INTEREST">等额本息</option>-->
+                                                        <option value="BEFORE_INTEREST_AFTER_PRINCIPAL">先息后本</option>
+                                                        <!--<option value="LEND_REPAY_ON_DEMAND">随借随还</option>-->
+                                                    </select>
+                                                </div>
+                                                <div class="col-xs-7" ng-if="productShow">
+                                                    <select class="form-control m-b"
+                                                            ng-options="product.label for product in productList"
+                                                            ng-model="productVal"
+                                                            ng-change="getProduct(productVal)"
+                                                    >
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="panel panel-info padder" ng-if="feetypeProductShow">
+                                                <table class="table table-striped m-b-none">
+                                                    <tbody>
+                                                    <tr>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.label.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle b-r">{{ product.label }}</td>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.state.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle">{{ product.state.label }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.storeInterest.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle b-r">{{ product.storeInterest }}</td>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.debtorInterest.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle">{{ product.debtorInterest }}</td>
+                                                    </tr>
+
+                                                    <tr>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.storeAmountMin.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle b-r">{{ product.storeAmountMin }}</td>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.storeAmountMax.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle">{{ product.storeAmountMax }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.capitalproduct.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle b-r">{{ product.capitalproduct.label }}</td>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.repaymentAccount.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle">{{ product.repaymentAccount.description
+                                                            }}
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="v-middle text-right">
+                                                            <span translate="product.description.label"></span>：
+                                                        </td>
+                                                        <td class="v-middle b-r">{{ product.description }}</td>
+                                                        <td class="v-middle text-right">
+                                                            <span>分期数</span>：
+                                                        </td>
+                                                        <td class="v-middle b-r">
+                                                            {{ product.periodNumber}}
+                                                        </td>
+
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="panel panel-info padder" ng-if="feetypeProductShow">
+                                                <div class="panel-body">
+                                                    <form class="form-horizontal" name="product_feetype_form">
+                                                        <table class="table table-hover b-light"
+                                                               style="border-bottom: none;">
+                                                            <thead>
+                                                            <tr>
+                                                                <th></th>
+                                                                <th>收费项目名称</th>
+                                                                <th>
+                                                                    分期
+                                                                </th>
+                                                                <th>
+                                                                    收费方式
+                                                                </th>
+                                                                <th>
+                                                                    输入数值
+                                                                </th>
+                                                                <th>
+                                                                    可退收费
+                                                                </th>
+                                                                <th>
+                                                                    说明
+                                                                </th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                            <tr ng-repeat="fee in feetypes">
+                                                                <td class="v-middle">
+                                                                </td>
+                                                                <td class="v-middle text-center">
+                                                                    {{ fee.label }}
+                                                                </td>
+                                                                <td class="v-middle text-center">
+                                                                    <select ng-model="forms[fee.feetypeCode].isPeriod"
+                                                                            class="form-control w">
+                                                                        <option value="true">分期</option>
+                                                                        <option value="false">不分期</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td class="v-middle text-center">
+                                                                    <select ng-model="forms[fee.feetypeCode].isRepayment"
+                                                                            class="form-control w">
+                                                                        <option value="true">按比例收费</option>
+                                                                        <option value="false">固定收费(元)</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td class="v-middle text-center">
+                                                                    <input type="text"
+                                                                           ng-model="forms[fee.feetypeCode].feeVal"
+                                                                           pattern="^(\d+(\.\d{1,3})?)$"
+                                                                           name="{{fee.feetypeCode + 'feeVal'}}"
+                                                                           class="form-control w">
+                                                                    <div class="text-left">
+                                                                        <span class="help-block text-danger"
+                                                                              ng-show="step2[fee.feetypeCode + 'feeVal'].$invalid">
+                                                                            <i class="fa fa-exclamation-circle text-danger"></i>&ensp;数字，最多三位小数
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="v-middle text-center">
+                                                                    <!--<input type="text" ng-model="forms[fee.feetypeCode].isRefund"-->
+                                                                    <!--class="form-control"-->
+                                                                    <!--required>-->
+                                                                    <select ng-model="forms[fee.feetypeCode].isRefund"
+                                                                            class="form-control w">
+                                                                        <option value="true">可退</option>
+                                                                        <option value="false">不可退</option>
+                                                                    </select>
+                                                                </td>
+                                                                <td class="v-middle text-center">
+                                                                    <input type="text"
+                                                                           ng-model="forms[fee.feetypeCode].comment"
+                                                                           class="form-control w">
+                                                                    <span style="display: none">
+                                                                       {{ forms[fee.feetypeCode].fee = fee }}
+                                                                    </span>
+                                                                </td>
+                                                            </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-xs-2"></div>
+                            <div class="col-xs-10">
+                                <button type="button" class="btn btn-default btn-rounded m-r-xs"
+                                        ng-click="steps.step2=true">上一步
+                                </button>
+                                <button type="submit"
+                                        class="btn btn-default btn-rounded" ng-click="productChargeSave()">销售产品保存
+                                </button>
+                            </div>
+
+                        </div>
+                    </form>
+                </tab>
+            </tabset>
+
+
+            <div class="modal fade" id="ordercdd_upload">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close"
+                                    ng-click="uploader.clearQueue();setUploadDone();"
+                                    data-dismiss="modal">
+                                <span>&times;</span>
+                            </button>
+                            <!--上传审核通过的文件-->
+                            上传文件
+                        </div>
+                        <div class="modal-body">
+                            <div class="hbox hbox-auto-xs hbox-auto-sm" nv-file-drop="" uploader="uploader"
+                                 filters="queueLimit, customFilter">
+                                <div class="col w-lg bg-light b-r bg-auto">
+                                    <div class="wrapper-md dker b-b">
+                                        <h4 class="m-n font-thin">选择文件</h4>
+                                    </div>
+                                    <div class="wrapper-md">
+                                        <div ng-show="uploader.isHTML5" class="m-b-md">
+                                            <!-- 3. nv-file-over uploader="link" over-class="className" -->
+                                            <div class="b-a b-2x b-dashed wrapper-lg bg-white text-center m-b"
+                                                 nv-file-over="" over-class="b-info" uploader="uploader">
+                                                拖动文件放到此处
+                                            </div>
+                                        </div>
+                                        <input id="audit_zip_file_input" class="w" type="file"
+                                               nv-file-select=""
+                                               multiple
+                                               uploader="uploader"/>
+                                    </div>
+                                </div>
+                                <div class="col bg-light bg-auto">
+                                    <div class="wrapper-md bg-light dk b-b">
+                                                    <span class="pull-right">文件数：
+                                                        <b class="badge bg-info">{{ uploader.queue.length }}</b>
+                                                    </span>
+                                        <h4 class="m-n font-thin text-danger ">文件上传</h4>
+                                    </div>
+                                    <div class="wrapper-md">
+                                        <table class="table bg-white-only b-a">
+                                            <thead>
+                                            <tr>
+                                                <th>文件名</th>
+                                                <th ng-show="uploader.isHTML5">大小</th>
+                                                <th>状态</th>
+                                                <th>操作</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr ng-repeat="item in uploader.queue">
+                                                <td>
+                                                    <div class="text-ellipsis w-sm">{{ item.file.name }}
+                                                    </div>
+                                                </td>
+                                                <td ng-show="uploader.isHTML5" nowrap>{{
+                                                    item.file.size/1024/1024|number:2
+                                                    }} MB
+                                                </td>
+                                                <td class="text-center">
+                                                    <span ng-show="item.isSuccess" class="text-success">
+                                                        <i class="fa fa-check"></i>
+                                                    </span>
+                                                    <span ng-show="item.isCancel" class="text-warning">
+                                                        <i class="fa fa-ban"></i>
+                                                    </span>
+                                                    <span ng-show="item.isError" class="text-danger">
+                                                        <i class="fa fa-cancel"></i>
+                                                    </span>
+                                                </td>
+                                                <td nowrap>
+                                                    <!--<button type="button" class="btn btn-default btn-xs"-->
+                                                    <!--ng-click="item.upload()"-->
+                                                    <!--ng-disabled="item.isReady || item.isUploading || item.isSuccess">-->
+                                                    <!--上传-->
+                                                    <!--</button>-->
+                                                    <button ng-disabled="item.isReady || item.isUploading || item.isSuccess"
+                                                            type="button" class="btn btn-default btn-xs"
+                                                            ng-click="item.remove();setUploadDone();">
+                                                        清除
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                        <div>
+                                            <div>
+                                                <p>进度</p>
+                                                <div class="progress bg-light dker" style="">
+                                                    <div class="progress-bar progress-bar-striped bg-info"
+                                                         role="progressbar"
+                                                         ng-style="{ 'width': uploader.progress + '%' }"></div>
+                                                </div>
+                                                <div class="m-t m-b font-bold h4 text-danger"
+                                                     ng-if="uploader.progress === 100 && !uploadDone">
+                                                    服务器正在处理中，请稍等。。。
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-addon btn-success"
+                                                    ng-click="uploader.uploadAll()"
+                                                    ng-disabled="!uploader.getNotUploadedItems().length">
+                                                <i class="fa fa-arrow-circle-o-up"></i> 上传
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="ordercdd_upload_one_photo" tabindex="-1" role="dialog">
+                <div class="modal-lg modal-dialog" role="document" style="width: 900px">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal"
+                                    aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                            <h4 class="modal-title">放大图片</h4>
+                        </div>
+                        <div class="modal-body" style="text-align: center">
+                            <img ng-src="http://files.xiaojinpingtai.com/{{ modalMaxPhoto.newFileName }}"
+                                 style="max-width: 750px;max-height: 650px;"
+                                 alt="">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-danger"
+                                    ng-click="photoChargeDelete(modalMaxPhoto)">
+                                删除
+                            </button>
+                            <button type="button" class="btn btn-primary"
+                                    data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">退出</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
+</div>
+<!-- /column -->
+</div>
+<!-- /hbox layout -->

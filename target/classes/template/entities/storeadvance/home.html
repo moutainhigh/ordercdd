@@ -1,0 +1,54 @@
+<script>
+    app.controller("loanHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile = {};
+                $scope.profileDetail = {};
+                $scope.canActs = [];
+                $scope.feetypes    = [];
+                $scope.getProfile = function () {
+
+                    entity.getDetail("/rest/storeadvances/" + $stateParams.id, ["createdBy", "state", "person", "feebackups", "workflow", "product", "serviceUser", "loan"]).then(function (resResult) {
+
+                        $scope.profile = resResult;
+
+                        console.log($scope.profile,'resResult');
+
+                        angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                            if ( val.actGroup === "OPERATE" ) {
+                                $scope.canActs.push(val);
+                            }
+                        });
+                    });
+                };
+
+                $scope.getProfile();
+
+                entity.getDetail("/storeadvance/detail?id=" + $scope.id).then(function (resResult) {
+                    console.log(resResult,'a');
+                    $scope.profileDetail = resResult;
+                });
+
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="loanHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

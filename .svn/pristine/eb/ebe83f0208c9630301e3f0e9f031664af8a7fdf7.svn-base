@@ -1,0 +1,72 @@
+<script>
+    app.controller("ordercddmatchingHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+
+                $scope.ordercddloans = [];
+
+                $scope.getProfile = function () {
+
+                    entity.getDetail("/rest/ordercdds/" + $scope.id, ["createdBy", "person", "product", "ordercddloans","createdByDepartment"]).then(function (resResult) {
+
+                        $scope.profile = resResult;
+
+                        angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                            if (val.actGroup === "UPDATE" || val.actGroup === "OPERATE" || val.actGroup === "LIST_OPERATE") {
+                                $scope.canActs.push(val);
+                            } else if (val.actGroup === "FILE_OPERATE") {
+                                $scope.canFileActs.push(val);
+                                $scope.uploadType = $scope.canFileActs[0];
+
+                                console.log($scope.uploadType);
+                            }
+                        });
+
+                        angular.forEach($scope.profile.ordercddloans._embeddedItems, function (val, key) {
+                            entity.getDetail(val._links.self.href, ["capitalproduct", "state"]).then(function (ordercddloanResResult) {
+                                if (ordercddloanResResult.state.stateCode !== "DISABLED") {
+                                    $scope.ordercddloans.push(ordercddloanResResult)
+                                    if($scope.ordercddloans.length >0){
+                                        $scope.ordercddloans = $scope.ordercddloans.sort(function (a,b) {
+                                            return b.lastModifiedAt -a.lastModifiedAt;
+                                        })
+                                    }
+                                }
+                            })
+                        });
+
+
+
+                    });
+                };
+
+                $scope.getProfile();
+
+                $scope.setCategory = function(uploadType){
+                    $rootScope.moduleUploadType = uploadType;
+                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="ordercddmatchingHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

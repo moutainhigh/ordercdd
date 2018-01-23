@@ -1,0 +1,416 @@
+<script>
+    app.controller("ordercddHomeController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "$state",
+            "entity",
+            function ($rootScope, $scope, $http, $stateParams, $state, entity) {
+
+                $scope.id = $stateParams.id;
+
+                $scope.profile     = {};
+                $scope.canActs     = [];
+                $scope.canFileActs = [];
+                //历史贷款信息
+                $scope.historyLoan = {};
+
+                $scope.capitals         = [];
+                $scope.capitalsArr      = [];
+                $scope.capitalContracts = [];
+
+                /*
+                * 上传文件表头
+                * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+                $scope.feetypes          = [];
+                $scope.feetypeStore      = [];
+
+                $scope.productVal = {};
+
+
+                $scope.productCompanyFeeList = [];
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipURL = "";
+
+
+                $scope.getProfile = function () {
+
+                    entity.getDetail("/rest/ordercdds/" + $stateParams.id, ["createdBy", "state", "person", "feebackups", "workflow", "product", "serviceUser", "loan", "vehicle"]).then(function (resResult) {
+
+                        $scope.profile = resResult;
+
+                        console.log($scope.profile);
+
+                        angular.forEach($scope.profile.currentUserCanActList, function (val, key) {
+                            if (val.actGroup === "UPDATE" || val.actGroup === "OPERATE" || val.actGroup === "FILE_PACKAGE" || val.actGroup === "LIST_OPERATE") {
+                                $scope.canActs.push(val);
+                            } else if (val.actGroup === "FILE_OPERATE") {
+                                $scope.canFileActs.push(val)
+                            }
+                        });
+
+
+                        //获取所有费用项目
+                        entity.getList("rest/feetypes").then(function (resResult1) {
+                            angular.forEach(resResult1._embeddedItems, function (val, key) {
+                                if (val.type == "1") {
+                                    $scope.feetypes.push(val)
+                                } else if (val.type == '0') {
+                                    $scope.feetypeStore.push(val);
+                                }
+                            });
+
+                            angular.forEach($scope.feetypeStore, function (val, key) {
+                                angular.forEach($scope.profile.feebackups._embeddedItems, function (val1, key1) {
+                                    if (val.feetypeCode == val1.feetypeCode) {
+                                        val.isPeriod = val1.isPeriod.toString();
+                                        val.isRefund = val1.isRefund.toString();
+
+                                        val.comment      = val1.comment;
+                                        val.periodNumber = val1.periodNumber;
+                                        if (val1.feeRate) {
+                                            val.isRepayment = "true";
+                                            val.feeVal      = val1.feeRate;
+                                        } else if (val1.feeAmount) {
+                                            val.feeVal      = val1.feeAmount;
+                                            val.isRepayment = "false";
+                                        }
+
+                                    }
+                                });
+
+                            });
+
+
+//                            angular.forEach($scope.feetypes, function (val, key) {
+//                                angular.forEach($scope.profile.feebackups._embeddedItems, function (val1, key1) {
+//                                    if (val.feetypeCode == val1.feetypeCode) {
+//                                        val.isPeriod = val1.isPeriod.toString();
+//                                        val.isRefund = val1.isRefund.toString();
+//
+//                                        val.comment      = val1.comment;
+//                                        val.periodNumber = val1.periodNumber;
+//                                        if (val1.feeRate) {
+//                                            val.isRepayment = "true";
+//                                            val.feeVal      = val1.feeRate;
+//                                        } else if (val1.feeAmount) {
+//                                            val.feeVal      = val1.feeAmount;
+//                                            val.isRepayment = "false";
+//                                        }
+//
+//                                    }
+//                                });
+//
+//                            });
+
+//                            console.log($scope.feetypes)
+
+
+
+
+                            entity.getList($scope.profile.product._links.productcompanyfees.href).then(function (resResult1) {
+                                if (resResult1._embeddedItems.length > 0) {
+                                    $scope.productCompanyFeeList = resResult1._embeddedItems;
+                                    angular.forEach($scope.feetypes, function (val, key) {
+                                        angular.forEach($scope.productCompanyFeeList, function (val1, key1) {
+                                            if (val.feetypeCode == val1.feetypeCode) {
+                                                val.isPeriod     = val1.isPeriod.toString();
+                                                val.isRefund     = val1.isRefund.toString();
+                                                val.periodNumber = val1.periodNumber;
+                                                if (val1.feeRate) {
+                                                    val.isRepayment = "true";
+                                                    val.feeVal      = val1.feeRate;
+                                                } else if (val1.feeAmount) {
+                                                    val.feeVal      = val1.feeAmount;
+                                                    val.isRepayment = "false";
+                                                }
+                                                val.comment = val1.comment;
+                                            }
+                                        });
+                                    })
+                                }
+                            })
+
+
+                        });
+
+                        $scope.state_code   = $scope.profile.state.stateCode;
+                        $scope.stateActList = $scope.profile.stateActList[$scope.state_code];
+
+
+                        entity.getDetail($scope.profile.product._links.self.href, ["repaymentAccount"]).then(function (resResult1) {
+
+//                            console.log(resResult1)
+                            $scope.productVal = resResult1;
+                        })
+
+
+                    });
+
+                    /* 历史贷款信息*/
+                    $http({
+                        method: "GET",
+                        url: "/ordercddDomain/detailOrder?ordercddId=" + $stateParams.id
+                    }).success(function (res) {
+                        $scope.historyLoan = res;
+                    });
+                };
+
+                $scope.getProfile();
+
+                //获取所有资方类型
+                entity.getList("rest/departmenttypes?size=10000").then(function (departmentResResult) {
+                    angular.forEach(departmentResResult._embeddedItems, function (val, key) {
+                        if (val.departmenttypeCode === "CREDITOR") {
+                            //获取所有合同
+                            entity.getList("/rest/ordercddActs?size=10000").then(function (ResResult) {
+                                $scope.allActs = ResResult._embeddedItems;
+                                //获取所有的资方
+                                entity.getList(val._links.departments.href).then(function (departmentResResult) {
+                                    $scope.capitals = departmentResResult._embeddedItems;
+                                    $scope.capital  = $scope.capitals[0];
+                                    $scope.getCapitalContractType($scope.capital)
+                                });
+                            });
+                        }
+                    })
+                });
+
+                $scope.getCapitalContractType = function (capital) {
+//                    console.log(capital)
+                    $scope.capitalContracts = [];
+                    //根据拿到的所有资方选出这个资方下的所有合同存到$scope.capitalContracts
+                    angular.forEach($scope.allActs, function (val, index) {
+                        if (capital.label === val.topcategory) {
+//                            console.log(val);
+                            $scope.capitalContracts.push(val);
+                            $scope.capitalContract = $scope.capitalContracts[0]
+                            $scope.setSubCategory($scope.capitalContract);
+                        }
+                    })
+                };
+
+                $scope.setSubCategory = function (capitalContract) {
+                    $rootScope.contractCategory.topcategory = capitalContract.topcategory;
+                    $rootScope.contractCategory.subcategory = capitalContract.subcategory;
+                    $rootScope.contractCategory.actCode     = capitalContract.actCode;
+                };
+
+
+//                /*patch方法*/
+//                $scope.patchAct = function (type, title, url, data) {
+//                    swal({
+//                        title: title,
+//                        type: type,
+//                        showCancelButton: true,
+//                        cancelButtonText: "退出",
+//                        confirmButtonText: "同意",
+//                        closeOnConfirm: true
+//                    }, function () {
+//                        $http({
+//                            method: "PATCH",
+//                            url: url,
+//                            data: data
+//                        }).success(function (resResult) {
+//
+//                            $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+//
+//                        });
+//                    });
+//                };
+
+//
+//                /*大方法的对象*/
+//                $scope.ordercddExcute = {
+//
+//                    /*关闭*/
+//                    "disable": function () {
+//                        $scope.patchAct("error", "这条客户信息是否关闭", "/rest/ordercdds/" + $scope.id, {act: "disable"});
+//                    },
+//
+//                    "downloadFile": function () {
+//                        swal({
+//                            title: "是否下载所有图片",
+//                            type: "warning",
+//                            showCancelButton: true,
+//                            cancelButtonText: "退出",
+//                            confirmButtonText: "同意",
+//                            closeOnConfirm: true
+//                        }, function () {
+//                            html = '<div style="position: fixed;top: 50%;right: 50%" class="sk-spinner sk-spinner-cube-grid" id="loadAction">' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '<div class="sk-cube"></div>' +
+//                                '</div>';
+//                            $("body").append(html);
+//
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/ordercdds/" + $scope.id,
+//                                data: {act: "downloadFile"}
+//                            }).success(function (resResult) {
+//                                $("#loadAction").remove();
+//                                if (resResult.filePackage) {
+//                                    $("#loadAction").remove();
+//                                    var form = $("<form>");//定义一个form表单
+//                                    form.attr("style", "display:none");
+//                                    form.attr("target", "");
+//                                    form.attr("method", "get");
+//                                    form.attr("action", "http://files.xiaojinpingtai.com/" + resResult.filePackage.newFileName);
+//
+//                                    $("body").append(form);//将表单放置在web中
+//                                    form.submit();
+//                                } else {
+//                                    $("#loadAction").remove();
+//                                    $rootScope.toasterWarning("注意", "该用户没有上传任何的图片！");
+//                                }
+//                            });
+//                        });
+//
+//
+//                    },
+//
+////                    /*分配客服经理*/
+////                    "distribution": function () {
+////                        $("#" + $scope.profile.id + "_distribution").modal("show");
+////                    },
+////                    "distributionSave": function (val,) {
+////                        if (val) {
+////                            $http({
+////                                method: "PATCH",
+////                                url: "/rest/ordercdds/" + $scope.id,
+////                                data: {
+////                                    act: "distribution",
+////                                    notice: val.id,
+////                                    serviceId: val.id
+////                                }
+////                            }).success(function (resResult) {
+////                                $("#" + $scope.profile.id + "_distribution").modal("hide");
+////                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+////                            });
+////                        } else {
+////                            $rootScope.toasterWarning("注意", "请选择一个客服经理！");
+////                        }
+////                    },
+//
+//
+//                    /*提交资料*/
+//                    "application": function () {
+//                        if ($scope.profile.applyIdentityNo && $scope.profile.applyMobile) {
+//                            $scope.patchAct("success", "这条客户信息是否提交", "/rest/ordercdds/" + $scope.id, {act: "application"});
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "客户信息不全请去添加！");
+//                        }
+//                    },
+//
+//                    /*匹配销售产品*/
+//                    "matching": function () {
+//                        $("#" + $scope.profile.id + "_matching").modal("show");
+//                    },
+//
+//                    /*匹配销售产品保存*/
+//                    "matchingSave": function (val) {
+//                        if (val) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/ordercdds/" + $scope.id,
+//                                data: {
+//                                    act: "matching",
+//                                    product: val._links.product.href
+//                                }
+//                            }).success(function (resResult) {
+//                                $("#" + $scope.profile.id + "_matching").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+//                            });
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请选择一个销售产品！");
+//                        }
+//
+//                    },
+//
+//
+//                    /*驳回打开modal*/
+//                    "failed": function () {
+//                        $("#" + $scope.profile.id + "_failed").modal("show");
+//                    },
+//                    /*驳回理由加改变状态*/
+//                    "failedSave": function (failedVal) {
+//                        if (failedVal) {
+//                            $http({
+//                                method: "PATCH",
+//                                url: "/rest/ordercdds/" + $scope.id,
+//                                data: {
+//                                    act: "failed",
+//                                    comment: failedVal
+//                                }
+//                            }).success(function (resResult) {
+//                                $("#" + $scope.profile.id + "_failed").modal("hide");
+//                                $state.go("workflowEntity.list", {entity_key: "ordercdd"}, {reload: true});
+//                            });
+//
+//                        } else {
+//                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+//                        }
+//                    },
+//
+//
+//                    /*同意 同时并向客户发合同*/
+//                    "adopt": function () {
+////                        $("#" + $scope.profile.id + "_upload").modal("show");
+//                        $scope.patchAct("success", "这条客户信息是否能通过", "/rest/ordercdds/" + $scope.id, {act: "adopt"});
+//                    },
+//
+//                    /*签约*/
+//                    "sign": function () {
+//                        $scope.patchAct("success", "这条客户信息是否能签约", "/rest/ordercdds/" + $scope.id, {act: "sign"});
+//                    },
+//
+//                    "updateSave": function () {
+//                        $scope.profile.act = "update";
+//                        delete $scope.profile.createdBy;
+//                        $http({
+//                            method: "PATCH",
+//                            url: "/rest/orderwdsjshes/" + $scope.id,
+//                            data: $scope.profile
+//                        }).success(function (resResult) {
+//                            if (resResult) {
+//                                $rootScope.toasterSuccess("成功", "修改成功");
+//                                $state.reload();
+//                            }
+//
+//                        });
+//                    },
+//
+//
+//                    "update": function () {
+//                        $state.go("workflowEntity.home.profile.form", {
+//                            id: $scope.id,
+//                            entity_key: "ordercdd"
+//                        }, {reload: false});
+//                    }
+//                };
+            }
+        ]
+    );
+</script>
+<!-- hbox layout -->
+<div class="hbox hbox-auto-xs bg-light" ng-controller="ordercddHomeController">
+    <!-- column -->
+    <div class="col w-md lter b-l">
+        <div class="h-full" ui-view></div>
+    </div>
+    <!-- /column -->
+</div>
+<!-- /hbox layout -->

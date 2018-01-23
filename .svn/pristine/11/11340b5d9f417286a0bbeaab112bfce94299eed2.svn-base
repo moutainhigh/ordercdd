@@ -1,0 +1,166 @@
+package com.liyang.controller.domain;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
+import com.liyang.domain.base.AbstractAuditorEntity;
+import com.liyang.domain.base.AbstractAuditorState;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.person.Person;
+import com.liyang.domain.product.Product;
+import com.liyang.domain.user.User;
+
+/**
+ * 列表页分页查询，转换工具方法
+ */
+public class EntityPageUtil {
+	private static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	
+	private EntityPageUtil() {}
+	
+	public static Pageable createPageable(Map<String,Object> requestParam) {
+		if (requestParam==null) {
+			return new PageRequest(0, 20);
+		}
+		Object pageObj = requestParam.get("page");
+		int page = pageObj==null?0:Integer.valueOf(String.valueOf(pageObj));
+		Object sizeObj = requestParam.get("size");
+		int size = sizeObj==null?20:Integer.valueOf(String.valueOf(sizeObj));
+		Object sortObj = requestParam.get("sort");
+		if (sortObj != null) {
+			Sort sort = null;
+			String sortParam = String.valueOf(sortObj);
+			String[] sortArray = sortParam.split(",");
+			if (sortArray.length==2) {
+				String orderField = sortArray[0];
+				String order = sortArray[1];
+				if ("desc".equals(order)) {
+					sort = new Sort(Sort.Direction.DESC, orderField);
+				}
+				if ("asc".equals(order)) {
+					sort = new Sort(Sort.Direction.ASC, orderField);
+				}
+				return new PageRequest(page, size, sort);
+			}
+			sort = new Sort(Sort.Direction.DESC, "id");
+			return new PageRequest(page, size, sort);
+		}
+		return new PageRequest(page, size);
+	}
+	
+	/**注意事项：
+	 * 1. 要转换的字段必须和实体类中的字段名称一致
+	 * 2. 实体类中的字段的getter方法必须是标准的，不能自定义，否则找不到
+	 * 3. Date的日期类型将转换为字符串形式
+	 * 4. 暂时只支持User、Department、AbstractWorkflowState类型的转换，有其他通用的再加
+	 * 5. 如果某个列表页需要区别于通用字段的转换，可以先将普通和通用类型字段转换完毕之后，再特殊处理，自定义转换特殊的字段
+	 * @param page 框架方法查询出来的分页数据
+	 * @param fields 希望返回给页面的字段，支持对象
+	 * @return
+	 */
+	public static <T> EntityPage convert(Page<T> page,String[] fields) {
+		if (page==null||fields==null) {
+			return null;
+		}
+		EntityPage newPage = new EntityPage();
+		newPage.setNumber(page.getNumber());
+		newPage.setSize(page.getSize());
+		newPage.setTotalElements(page.getTotalElements());
+		newPage.setTotalPages(page.getTotalPages());
+		for (T obj : page) {
+			Map<String,Object> map = new HashMap<>();
+			Class<?> cls = obj.getClass();
+			for (String field : fields) {
+				if (field==null||"".equals(field)) {
+					continue;
+				}
+                String fieldGetName = "get"
+                        + field.substring(0, 1).toUpperCase()
+                        + field.substring(1);
+                try {
+                	Method fieldGetMet = cls.getMethod(fieldGetName, new Class[]{});
+                    Object fieldVal = fieldGetMet.invoke(obj, new Object[]{});
+                    changeFieldType(map, field, fieldVal);
+				} catch (NoSuchMethodException e) {//字段没有get方法
+					map.put(field, null);
+					continue;
+				}catch (InvocationTargetException e) {//方法执行出错
+					map.put(field, null);
+					continue;
+				}catch (IllegalAccessException e) {//private方法
+					map.put(field, null);
+					continue;
+				}
+			}
+			addCurrentUserCanActList(map, obj);
+			newPage.add(map);
+		}
+		return newPage;
+	}
+	
+	private static <T> void addCurrentUserCanActList(Map<String,Object> map,T obj) {
+		if (obj instanceof AbstractAuditorEntity) {
+			AbstractAuditorEntity entity = (AbstractAuditorEntity) obj;
+			List<?> actList = entity.injectCurrentUserCanActList();
+			map.put("currentUserCanActList", actList);
+		}
+	}
+	
+	private static void changeFieldType(Map<String,Object> map, String field, Object fieldVal) {
+		if (fieldVal instanceof Date) {//日期类型
+			Date date = (Date) fieldVal;
+			String dateStr = dateFormat.format(date);
+			map.put(field, dateStr);
+			return;
+		}
+		if (fieldVal instanceof User) {
+			User user = (User) fieldVal;
+			map.put(field+"_nickname", user.getNickname());
+			map.put(field+"_username", user.getUsername());
+			map.put(field+"_id",user.getId());
+			return;
+		}
+		if (fieldVal instanceof Department) {
+			Department department = (Department) fieldVal;
+			map.put(field+"_label", department.getLabel());
+			return;
+		}
+		if (fieldVal instanceof AbstractAuditorState) {
+			AbstractAuditorState state = (AbstractAuditorState) fieldVal;
+			map.put(field+"_label", state.getLabel());
+			return;
+		}
+		if(fieldVal instanceof Person){
+		    Person person=(Person) fieldVal;
+		    map.put(field+"_id",person.getId());
+		    map.put(field+"_name",person.getName());
+		    return;
+        }
+
+        //测试
+        if(fieldVal instanceof Ordercdd){
+		    Person person=(Person) ((Ordercdd) fieldVal).getPerson();
+		    User user=(User) ((Ordercdd) fieldVal).getUser();
+            Product product=(Product)((Ordercdd) fieldVal).getProduct();
+            Ordercdd ordercdd=(Ordercdd)fieldVal;
+            map.put("person_id",person.getId());
+            map.put("user_id",user.getId());
+            map.put("product_id",product.getId());
+            map.put("ordercdd_id",ordercdd.getId());
+        }
+		map.put(field, fieldVal);
+	}
+
+}

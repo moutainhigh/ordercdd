@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>融资确认书</title>
+</head>
+<style>
+    *{
+        font-size: 12px;
+    }
+    .whole-container{
+        width: 210mm;
+        height: 297mm;
+        /*background-color: #d6d6d6;*/
+        margin:auto;
+        color: #474747;
+        border:1px solid #000;
+    }
+    .whole-container h2{
+        padding:30px 0 20px;
+    }
+
+    .tc{
+        text-align: center;
+    }
+    .tl{
+        text-align: left;
+    }
+    .table-contract{
+        width:200mm;
+        margin:auto;
+        border:1px solid #000;
+        border-collapse: collapse;
+        /*table-layout: fixed;*/
+        word-break: break-all;
+    }
+    .table-contract td{
+        table-layout: fixed;
+        padding:4px 8px;
+
+    }
+    .contract-sure{
+        font-size: 16px;
+    }
+    .tr-contract{
+        text-align: left;
+        font-weight: bold;
+        background-color: rgba(128, 128, 128, 0.31);
+    }
+    .border-top{
+        border-top: 0;
+    }
+</style>
+<body>
+
+
+<div class="whole-container tc">
+    <!--<h2>融资确认书</h2>-->
+    <table class="table-contract" border= "1" style="margin-top: 20px">
+        <tr>
+            <td style="padding: 10px;text-align: center">
+               <span class="contract-sure">
+                   融资确认书
+               </span>
+            </td>
+        </tr>
+    </table>
+    <table class="table-contract border-top" border= "1">
+        <tr class="tr-contract">
+            <td colspan="4"  >
+
+                一、基本信息
+
+            </td>
+        </tr>
+        <tr>
+            <td width="17.5%">客户姓名</td>
+            <td width="32.5%">${userName !"无"}</td>
+            <td width="17.5%">联系电话</td>
+            <td width="32.5%">${userPhone !"无"}</td>
+        </tr>
+        <tr>
+            <td>身份证号</td>
+            <td>${userIdCard !"无"}</td>
+            <td>服务城市</td>
+            <td>${EnterpriseProvince !"无"}</td>
+        </tr>
+        <tr>
+            <td>储蓄卡支行</td>
+            <td>${BankCardBranch !"无"}</td>
+            <td>储蓄卡卡号</td>
+            <td>${BankCard !"无"}</td>
+        </tr>
+        <tr>
+            <td>借款总额</td>
+            <td>${applyAmount !"无"}</td>
+            <td>车牌号</td>
+            <td>${plateNumber !"无"}</td>
+            <!--<td>业务员</td>-->
+            <!--<td>${serviceUserName !"无"}</td>-->
+        </tr>
+        <tr>
+            <td>车    型</td>
+            <td>${vehicleType !"无"}</td>
+            <td> 车辆年份</td>
+            <td>${yearExpirationDate !"无"}</td>
+        </tr>
+        <tr>
+            <td>上牌区域</td>
+            <td>${vehicleProvince !"无"} ${vehicleCity}</td>
+            <td>公里数</td>
+            <td>${vehicleKm  !"无"}</td>
+        </tr>
+        <!--TODO:新增-->
+        <tr>
+            <td>车险到期日</td>
+            <td>${insuranceExpirationDate  !"无"}</td>
+            <td>客服</td>
+            <td>${customerService  !"无"}</td>
+        </tr>
+        <tr>
+            <td>保单到期日</td>
+            <td>${insuranceExpirationDate  !"无"}</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <table class="table-contract border-top" border= "1">
+        <tr class="tr-contract">
+            <td colspan="6"  >
+
+                二、贷款详情
+
+            </td>
+
+        <tr>
+        <tr>
+        <!--TODO:新增-->
+            <td width="21mm">标的性质</td>
+            <td width="42mm">${targetProperty !"无"}</td>
+            <td width="21mm">抵押物性质</td>
+            <td width="42mm">${mortgageProperty !"无"}</td>
+            <td width="21mm">月利息</td>
+            <td width="42mm">${debtorInterest !"无"}%</td>
+        </tr>
+        <tr>
+            <!--TODO:新增-->
+            <td width="21mm">贷款金额</td>
+            <td width="42mm">${applyAmount !"无"}</td>
+            <td width="21mm">贷款期限</td>
+            <td width="42mm">${debtorInterest !"无"}%</td>
+            <td width="21mm">借款日期</td>
+            <td width="42mm">${debtorInterest !"无"}%</td>
+        </tr>
+    </table>
+    <table class="table-contract border-top" border= "1">
+        <tr class="tr-contract">
+            <td colspan="7"  >
+
+                三、收费说明
+
+            </td>
+
+        <tr>
+        <tr>
+            <td rowspan="7" width= "14mm">一次性收费</td>
+        </tr>
+        <tr>
+            <td width="41.5mm"> 管理费 </td>
+            <td width="60mm">${fManagementExpense !"无"}</td>
+            <td width="41.5mm"> 服务费 </td>
+            <td  width="60mm">${fServiceCharge !"无"}</td>
+            <td width="41.5mm"> 公证费 </td>
+            <td width="60mm">${fNotarizationFee !"无"}</td>
+        </tr>
+        <tr>
+            <td>车辆保险费</td>
+            <td>${fPremium !"无"}</td>
+            <td> GPS安装费 </td>
+            <td>${GPSInstallationFee !"无"}</td>
+            <td> 抵押登记费 </td>
+            <td>${fMortgageRegistrationFee !"无"}</td>
+        </tr>
+        <!--TODO:新增-->
+        <tr>
+            <td>融资担保费</td>
+            <td></td>
+            <td>月利息 </td>
+            <td></td>
+            <td>GPS折旧费 </td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>GPS流量费</td>
+            <td></td>
+            <td>其他收费 </td>
+            <td></td>
+            <td>风险金</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>年检押金</td>
+            <td></td>
+            <td>保险押金 </td>
+            <td></td>
+            <td>履约险保费</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td colspan="2">一次性收费合计</td>
+            <td colspan="4"></td>
+            <!--<td>保险押金 </td>-->
+            <!--<td></td>-->
+            <!--<td>履约险保费</td>-->
+            <!--<td></td>-->
+        </tr>
+        <!--<tr>-->
+
+        <!--<td colspan="2"> 一次性收费合计 </td>-->
+        <!--<td colspan="4">${lumpSumFee !"无"}</td>-->
+        <!--</tr>-->
+        <tr>
+            <td>可退收费</td>
+            <td> 保证金 </td>
+            <td>${fBond !"无"}</td>
+            <td> 押金 </td>
+            <td>${fDeposit !"无"}</td>
+            <td> 可退收费合计 </td>
+            <td>${otherDeposit !"无"}</td>
+        </tr>
+        <tr>
+            <!--<td colspan="2"> 可退收费合计 </td>-->
+            <!--<td colspan="5">${TotalRefundableCharges !"无"}</td>-->
+            <td colspan="1"> 其他收费 </td>
+            <td colspan="6">${fOtherCharges !"无"}</td>
+        </tr>
+        <tr>
+            <!--<td colspan="2"> 可退收费合计 </td>-->
+            <!--<td colspan="5">${TotalRefundableCharges !"无"}</td>-->
+            <td style="font-size: 18px;padding: 8px;text-align: center" colspan="2"> 到账金额 </td>
+            <td colspan="5">${fOtherCharges !"无"}</td>
+        </tr>
+        <!--<tr>-->
+
+        <!--<td colspan="3"> 到 账 金 额　 </td>-->
+        <!--<td colspan="4">${CreditedAmount !"无"}</td>-->
+        <!--</tr>-->
+    </table>
+    <table class="table-contract border-top" border= "1">
+        <tr>
+            <td width="40mm" rowspan="12">每月收费明细</td>
+            <td>期数</td>
+            <td>还款日期</td>
+            <td>月还合计</td>
+            <td>本金</td>
+            <td>利息</td>
+            <td>履约险保费</td>
+            <td>服务费</td>
+            <td>GPS流量费</td>
+            <td>停车费</td>
+            <td>其他收费</td>
+            <td>融资担保费</td>
+        </tr>
+        <#assign plans=resPlans?eval />
+        <#if plans?exists >
+            <#list plans as resPlan>
+                <tr>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                    <td>${resPlan.planNumber}</td>
+                </tr>
+            </#list>
+        </#if>
+
+    </table>
+</div>
+
+<div class="whole-container tc" style="margin-top: 20px;padding-top: 20px;">
+
+    <table class="table-contract" border= "1">
+        <tr class="tr-contract">
+            <td colspan="7"  >
+                四、客户确认事项
+            </td>
+        <tr>
+        <tr>
+            <td colspan="2"> 车辆管理要求 </td>
+            <td colspan="5" class="tl">车辆必须上牌并办理抵押登记，安装GPS；</td>
+        </tr>
+        <tr>
+            <td colspan="2"> 保险要求 </td>
+            <td colspan="5" class="tl">保险险种：车损险、第三者责任险，保险期限覆盖贷款期限；</td>
+        </tr>
+        <tr>
+            <td rowspan="5"  colspan="2"> 注意事项 </td>
+            <td colspan="5" class="tl">1、以上成本不包括逾期还款费用，逾期罚息按照借款本金8‰一天收取；</td>
+        </tr>
+        <tr>
+            <td colspan="5" class="tl">2、逾期还款、再次抵押、恶意损坏或拆除GPS、骗贷等严重违约，将额外收取违约金；</td>
+        </tr>
+        <tr>
+            <td colspan="5" class="tl">3、若因客户违约被催收或处置，产生的拖车费、差旅费、催收费等费用另计；</td>
+        </tr>
+        <tr>
+            <td colspan="5" class="tl">4、车辆年检到期未年检、车辆保险到期未续保，皆视为违约处理； </td>
+        </tr>
+        <tr>
+            <td colspan="5" class="tl">5、提前还款，按实际约定执行。</td>
+        </tr>
+        <tr>
+            <td colspan="7">
+                <br>
+                声明：本人已明确上述各项收费标准及含义，并了解贷款放款后本人的权力和义务。
+                <br>
+                <pre>客户签字：                日期：</pre>
+
+            </td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>

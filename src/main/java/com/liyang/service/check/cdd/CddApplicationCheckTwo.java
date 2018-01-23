@@ -1,0 +1,32 @@
+package com.liyang.service.check.cdd;
+
+import com.liyang.domain.ordercdd.Ordercdd;
+import com.liyang.domain.person.Person;
+import com.liyang.domain.person.PersonRepository;
+import com.liyang.service.check.AbstractCheck;
+import com.liyang.util.FailReturnObject;
+import com.liyang.util.ReturnObject;
+
+/**
+ * 2填入身份证时，遍历手机号，如果客户的手机号不存在，再次遍历身份证，身份证存在，则反馈：该身份证已经绑定了手机号XXX，如果需要修改请联系管理员。
+ */
+public class CddApplicationCheckTwo extends AbstractCheck<Ordercdd> {
+    PersonRepository personRepository;
+
+    public CddApplicationCheckTwo(PersonRepository personRepository) {
+        this.personRepository = personRepository;
+    }
+
+    @Override
+    public void handler(Ordercdd ordercdd) {
+        Person person = personRepository.findByTelephone(ordercdd.getApplyMobile());
+        if(person!=null){
+            return;
+        }
+        person = personRepository.findByIdentity(ordercdd.getApplyIdentityNo());
+
+        if(person!=null){
+            throw new FailReturnObject(1663,"该身份证已经绑定其他客户及手机号，请重新填写", ReturnObject.Level.INFO);
+        }
+    }
+}

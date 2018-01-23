@@ -1,0 +1,91 @@
+package com.liyang.controller.domain;
+
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Resource;
+
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jpa.query.expression.QueryExpSpecificationBuilder;
+import com.jpa.query.expression.generic.GenericQueryExpSpecification;
+import com.liyang.Exception.TimeConditiosException;
+import com.liyang.domain.bank.Bank;
+import com.liyang.domain.bankcard.Bankcard;
+import com.liyang.domain.bankcard.BankcardRepository;
+import com.liyang.domain.department.Department;
+import com.liyang.domain.department.DepartmentRepository;
+import com.liyang.domain.department.Departmenttype.DepartmenttypeCode;
+import com.liyang.util.CommonUtil;
+
+@RestController
+@RequestMapping("/bankcard")
+public class BankcardController {
+	@Resource
+	private BankcardRepository repository;
+	@Resource
+	private DepartmentRepository departmentRepository;
+	
+	@RequestMapping("/search")
+	public EntityPage search(@RequestParam(required=false) Map<String,Object> params) throws TimeConditiosException {
+		GenericQueryExpSpecification<Bankcard> queryExpression = new GenericQueryExpSpecification<Bankcard>();
+
+		//状态
+		queryExpression.add(QueryExpSpecificationBuilder.eq("state.id", params.get("state_id"),true));
+		//账户号码
+		if (params.get("accountIdentity")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("accountIdentity", params.get("accountIdentity").toString(),true));
+		}
+		//客户名称
+		if (params.get("realName")!=null) {
+			queryExpression.add(QueryExpSpecificationBuilder.like("realName", params.get("realName").toString(),true));
+		}
+		limitField(queryExpression);
+		Page<Bankcard> page = repository.findAll(queryExpression, EntityPageUtil.createPageable(params));
+		String[] fields = new String[] {"id","label","createdAt","lastModifiedAt","state",
+				"user","realName","branchName","accountIdentity","status","bank","description"};
+		return convertCustom(EntityPageUtil.convert(page, fields));
+	}
+	
+	private EntityPage convertCustom(EntityPage page) {
+        List<Map<String, Object>> entities = page.getEntitys();
+        if (entities == null) {
+            return page;
+        }
+        for (Map<String, Object> map : entities) {
+            if (map == null) {
+                continue;
+            }
+
+            Object bank = map.get("bank");
+            map.remove("bank");
+            if (bank != null) {
+            	Bank obj = (Bank) bank;
+            	map.put("bank_alias", obj.getAlias());
+                map.put("bankImage", obj.getBankImage());
+                map.put("bankIcon", obj.getBankIcon());
+                map.put("bankCode", obj.getBankCode());
+                map.put("bank_isOnline", obj.getIsOnline());
+            }
+        }
+        return page;
+    }
+	
+	/**
+     * 限制权限，例如：部门、角色等
+     */
+    private void limitField(GenericQueryExpSpecification<Bankcard> queryExpression) {
+    	Integer curDepartmentId = CommonUtil.getCurrentUserDepartment().getId();
+    	//平台
+    	Department company = departmentRepository.findByDepartmenttypeCode(DepartmenttypeCode.COMPANY);
+    	//门店，暂时认为非平台的
+    	if(curDepartmentId.equals(company.getId())) {//如果登录人部门是平台，只查平台一审和平台二审的
+    	}else {//查询其他状态的
+			queryExpression.add(QueryExpSpecificationBuilder.eq("createdByDepartment.id", 
+					curDepartmentId, true));
+		}
+	}
+}

@@ -1,0 +1,376 @@
+
+<script>
+    "use strict";
+    app.controller("loanListModuleController",
+        [
+            "$rootScope",
+            "$scope",
+            "$http",
+            "$stateParams",
+            "entity",
+            "$state",
+            "FileUploader",
+            function ($rootScope, $scope, $http, $stateParams, entity, $state, FileUploader) {
+
+                $scope.profile = {};
+                $scope.canActs = [];
+                $scope.canFileActs = [];
+
+                $scope.profile_id = null;
+
+                /*patch方法*/
+                $scope.patchAct = function (type, title, url, data) {
+                    swal({
+                        title: title,
+                        type: type,
+                        showCancelButton: true,
+                        cancelButtonText: "取消",
+                        confirmButtonText: "同意",
+                        closeOnConfirm: true
+                    }, function () {
+                        $http({
+                            method: "PATCH",
+                            url: url,
+                            data: data
+                        }).success(function (resResult) {
+                            $state.go("workflowEntity.list", {entity_key: "loan"}, {reload: true});
+                        });
+                    });
+                };
+
+                /*
+               * 上传文件表头
+               * */
+                $scope.headerInformation = "";
+                $scope.promptInformation = "";
+
+                /*
+                *上传打包好的zipURL
+                * */
+                $scope.zipName = "";
+
+                /*大方法的对象*/
+                $scope.loanExcute = {
+                    /*放款*/
+                    "loan": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否放款", "/rest/loans/" + profile.id, {
+                            act: "loan",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /* 上传凭证*/
+                    "uploadMaterials": function (profile) {
+                        $scope.profile_id  = profile.id;
+                        $scope.actCode           = "uploadMaterials";
+                        $scope.headerInformation = "上传凭证";
+                        $scope.promptInformation = "上传图片";
+                        $scope.uploader.clearQueue();
+                        $("#" + profile.id + "_upload").modal("show");
+                    },
+//                    /*同意确定*/
+                    "confirmInformation": function (profile) {
+                        $scope.patchAct("success", "这条贷款是否同意", "/rest/loans/" + profile.id, {
+                            act: "confirmInformation",
+                            loanType: "ORDERCDD"
+                        });
+                    },
+                    /*异常催收*/
+                    "exception": function (profile) {
+                        $("#" + profile.id + "_failed").modal("show");
+                    },
+
+                    /*异常催收理由加改变状态*/
+                    "exceptionRemark": function (exceptionRemark, profile) {
+                        if (exceptionRemark) {
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/loans/" + profile.id,
+                                data: {
+                                    act: "exception",
+                                    exceptionRemark: exceptionRemark,
+//                                    notice: profile.serviceUser.id
+                                }
+                            }).success(function (resResult) {
+                                $("#" + profile.id + "_failed").modal("hide");
+                                $state.go("workflowEntity.list", {entity_key: "loan"}, {reload: true});
+                                $rootScope.toasterInfo("成功！", "已改为异常催收！");
+                            });
+
+                        } else {
+                            $rootScope.toasterWarning("注意", "请填写详细的未通过理由，以方便客户提交数据！");
+                        }
+                    },
+
+
+                };
+
+                $scope.uploadDone = false;
+
+                $scope.setUploadDone = function () {
+                    $scope.uploadDone = false;
+                };
+                $scope.uploader = new FileUploader({
+                    url: '/fileUpload'
+                });
+
+                $scope.uploader.filters.push({
+                    name: 'customFilter',
+                    fn: function (item, options) {
+                        return this.queue.length < 30;
+                    }
+                });
+
+                $scope.uploader.onAfterAddingFile = function (fileItem) {
+
+                    if (fileItem.file.type.indexOf("image") !== -1) {
+                        fileItem.actCode = $scope.actCode;
+
+                        fileItem.formData = [{fileType: "file"}];
+
+                        $("#audit_zip_file_input").val("");
+
+                    } else {
+                        $rootScope.toasterError("警告！", "只能上传图片格式请重新选择！");
+                        fileItem.remove();
+                    }
+                };
+
+                $scope.uploader.onErrorItem = function (fileItem, response, status, headers) {
+                    $rootScope.toasterError("上传失败！", fileItem.file.name + " 上传失败！");
+                };
+//
+                $scope.uploader.onSuccessItem = function (fileItem, response, status, headers) {
+                    $scope.uploadDone = true;
+
+                    angular.forEach($scope.canActs, function (val, key) {
+                        if (val.actCode == fileItem.actCode) {
+                            val.actPhoto.push(response.result);
+                        }
+                    });
+
+                    $http({
+                        method: "GET",
+
+                        url: "/rest/loans/"+$scope.profile_id+"/files"
+                    }).success(function (resResult) {
+                        console.warn("调用loan了1111111111");
+                        $scope.filesLength = resResult._embedded.loanFiles;
+                        $scope.pictureId = null;
+
+                        if (fileItem.actCode === "uploadMaterials") {
+                            $scope.zipName = response.result.newFileName;
+                            $http({
+                                method: "PATCH",
+                                url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+                                data: {
+                                    fileObject: response.result,//fileObject是上传完文件后的文件对象
+                                    act: fileItem.actCode//上传文件的行为
+                                }
+                            }).success(function (data) {
+
+                            });
+                        }
+
+                    });
+                };
+
+                $scope.uploader.onCompleteAll = function () {
+                    $("#" + $scope.profile_id + "_upload").modal("hide");
+                    $http({
+                        method: "PATCH",
+                        url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+                        data: {
+                            act: "loan",
+                            loanType: "ORDERCDD"
+                        }
+                    }).success(function (date) {
+                        console.warn("调用loan了333333333333");
+                        $state.reload(true);
+                        $rootScope.toasterSuccess("成功", "放款成功");
+                    })
+                };
+
+//                    function req1(callback) {
+//                        $http({
+//                            method: "GET",
+//                            url: "/rest/loans/" + $scope.profile_id + "/files"
+//                        }).success(function (resResult) {
+//                            $scope.filesLength = resResult._embedded.loanFiles;
+//                            $scope.pictureId = null;
+//                            if (fileItem.actCode === "uploadMaterials") {
+//                                $scope.zipName = response.result.newFileName;
+//                                callback(req3)
+//                                console.warn("调用loan了111111");
+//                            }
+//                        })
+//                    }
+//
+//                    function req2(callback) {
+//                        // TODO:判断有几张图片，下面就执行几次
+//
+//                        $http({
+//                            method: "PATCH",
+//                            url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+//                            data: {
+//                                fileObject: response.result,//fileObject是上传完文件后的文件对象
+//                                act: fileItem.actCode//上传文件的行为
+//                            }
+//                        }).success(function (data) {
+//                            $("#" + $scope.profile_id + "_upload").modal("hide");
+//                            console.warn("调用loan了222222222222");
+//                            callback()
+//                        })
+//                    }
+//
+//                    function req3() {
+//                        $("#" + $scope.profile_id + "_upload").modal("hide");
+//                        console.warn("调用loan了3333333333333");
+//                        $http({
+//                            method: "PATCH",
+//                            url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+//                            data: {
+//                                act: "loan",
+//                                loanType: "ORDERCDD"
+//                            }
+//                        }).success(function (date) {
+//                            $state.reload(true);
+//                            $rootScope.toasterSuccess("成功", "放款成功");
+//                        })
+//                    }
+//
+//                    // 方法调用
+//                    req1(req2)
+//
+//                }
+
+
+
+
+
+
+
+//                        if ($scope.filesLength.length >0){
+//                                $scope.pictureId = resResult._embedded.loanFiles[0].id;
+//                                $http({
+//                                    method: "DELETE",
+//
+//                                    url: "/rest/loanFiles/"+$scope.pictureId+"/log"
+//                                }).success(function (resResult) {
+//                                    $http({
+//                                        method: "DELETE",
+//                                        url: "/rest/loanFiles/"+$scope.pictureId
+//                                    }).success(function (resResult) {
+////                                        console.log(resResult)
+//                                        $("#storeBonus_upload_one_photo").modal("hide");
+////
+//                                        if (fileItem.actCode === "uploadMaterials") {
+//                                            $scope.zipName = response.result.newFileName;
+//                                            $http({
+//                                                method: "PATCH",
+//                                                url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+//                                                data: {
+//                                                    fileObject: response.result,//fileObject是上传完文件后的文件对象
+//                                                    act: fileItem.actCode//上传文件的行为
+//                                                }
+//                                            }).success(function (data) {
+//
+//                                                $("#" + $scope.profile_id + "_upload").modal("hide");
+//
+//                                                $http({
+//                                                    method: "PATCH",
+//                                                    url: "/rest/loans/" + $scope.profile_id,//这里是关联的实体
+//                                                    data: {
+//                                                        act: "loan",
+//                                                        loanType: "ORDERCDD"
+//                                                    }
+//                                                }).success(function (date) {
+//                                                    $state.reload(true);
+//                                                    $rootScope.toasterSuccess("成功", "放款成功");
+//                                                })
+//
+//                                            });
+//                                        }
+//
+//                                    });
+//                                });
+
+//                        }
+//                        else{
+
+//                        }
+
+
+
+
+
+
+               /* 查看凭证
+               * */
+
+                $scope.uploadOnePhoto = function (id) {
+
+                    $scope.pictureId = id;
+//                    $scope.modalMaxPhoto = null;
+                    $http({
+                        method: "GET",
+                        url: "/rest/loans/"+id+"/files"
+                    }).success(function (res) {
+                        $scope.modalMaxPhoto = res._embedded.loanFiles;
+                        console.log(res,'345')
+                        $("#loans_upload_one_photo").modal("show");
+                    });
+                };
+
+
+                /*
+              * 删除图片
+              * */
+                $scope.photoChargeDelete = function (fee,item) {
+                    console.log($scope.pictureId,'pppppp')
+                    console.log(fee,'pppppp')
+                    if (fee) {
+                        $rootScope.sweetConfirm({
+                            title: "提示",
+                            text: "你是否要删除这张图片！",
+                            type: "warning",
+                            callback: function () {
+                                $http({
+                                    method: "GET",
+                                    url: "/rest/loans/" + $scope.pictureId + "/files"
+                                }).success(function (resResult) {
+                                    console.log(resResult,'aaaaaaaaaaaa')
+                                    angular.forEach(resResult._embedded.loanFiles, function (val, key) {
+                                        if (val.newFileName == fee.newFileName) {
+                                            $http({
+                                                method: "DELETE",
+                                                url: "/rest/loanFiles/"+fee.id+"/log"
+                                            }).success(function (resResult) {
+                                                console.log(resResult,'aaaaaaaaaaaa')
+                                                $http({
+                                                    method: "DELETE",
+                                                    url: "/rest/loanFiles/"+fee.id
+                                                }).success(function (res) {
+                                                    $state.go("workflowEntity.list", {entity_key: "loan"}, {reload: true});
+                                                    $("#loans_upload_one_photo").modal("hide");
+                                                    $rootScope.toasterInfo("成功！", "删除成功");
+                                                })
+                                            });
+                                        }
+                                    })
+                                });
+
+                            }
+                        })
+                    }
+                };
+
+
+
+
+            }
+        ]
+    );
+</script>
+
+
+<div ng-controller="loanListModuleController" class="h-full" ui-view></div>

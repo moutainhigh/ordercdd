@@ -721,7 +721,8 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td class="v-middle" ng-class="{'text-danger':item.state_label==='未放款','text-warning':item.state_label==='可放款'}">
+                                            <!--<td class="v-middle" ng-class="{'text-danger':item.state_label==='未放款','text-warning':item.state_label==='可放款'}">-->
+                                            <td class="v-middle" ng-class="{'已放款': 'text-success','可放款':'text-warning', '未放款': 'text-danger','关闭':'text-muted'}[item.state_label]">
                                                 {{ item.state_label }}
                                             </td>
                                             <!--<td class="v-middle">-->

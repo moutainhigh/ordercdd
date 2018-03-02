@@ -351,7 +351,7 @@
                                             <th>门店放款单号</th>
                                             <th>客户姓名</th>
 
-                                            <th>凭证状态</th>
+                                            <!--<th>凭证状态</th>-->
                                             <th>门店利润</th>
                                             <th>实际放款金额</th>
                                             <th>放款方式</th>
@@ -546,7 +546,8 @@
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td class="v-middle">
+                                            <td class="v-middle"
+                                                ng-class="{'已放款': 'text-success','可放款':'text-warning', '未放款': 'text-danger','关闭':'text-muted'}[item.state_label]">
                                                 {{ item.state_label }}
                                             </td>
                                             <!--<td class="v-middle">-->
@@ -562,10 +563,10 @@
                                                 </a>
                                             </td>
 
-                                            <td class="v-middle"
-                                                ng-class="{true: 'text-success', false: 'text-danger'}[item.storebonus_file_length>0]">
-                                                {{ item.storebonus_file_length > 0 ? '已上传':'未上传' }}
-                                            </td>
+                                            <!--<td class="v-middle"-->
+                                            <!--ng-class="{true: 'text-success', false: 'text-danger'}[item.storebonus_file_length>0]">-->
+                                            <!--{{ item.storebonus_file_length > 0 ? '已上传':'未上传' }}-->
+                                            <!--</td>-->
                                             <td class="v-middle">
                                                 {{ item.realityAmount | nullToNumber }}
                                             </td>
